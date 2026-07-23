@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "CommonJS",
-    "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -10,10 +9,8 @@
     "declaration": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@aios/*": ["packages/*/src"]
-    }
+    "rootDir": ".",
+    "types": ["node"]
   },
   "exclude": ["node_modules", "dist"]
 }

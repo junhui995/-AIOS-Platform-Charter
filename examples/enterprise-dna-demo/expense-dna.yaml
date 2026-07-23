@@ -1,0 +1,28 @@
+version: "1.0"
+domain: "Finance"
+entities:
+  - name: "Expense"
+    attributes:
+      amount: "number"
+      reason: "string"
+      department_id: "string"
+policies:
+  - id: "policy_expense_limit"
+    description: "Any expense above 500 requires Finance Manager approval."
+    constraint: "amount > 500"
+    action: "require_approval"
+    role: "Finance Manager"
+workflows:
+  - name: "ExpenseApprovalWorkflow"
+    trigger: "ExpenseCreated"
+    steps:
+      - step_id: "check_policy"
+        action: "EvaluatePolicy"
+        policy_ref: "policy_expense_limit"
+      - step_id: "auto_approve"
+        condition: "policy_passed == true"
+        action: "ApproveExpense"
+      - step_id: "manual_approve"
+        condition: "policy_passed == false"
+        action: "RequestHumanApproval"
+        role_ref: "Finance Manager"
