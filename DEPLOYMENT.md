@@ -1,44 +1,50 @@
 # AIOS MVP 部署与运行手册 (Deployment Manual)
 
-Version: 0.1
+Version: 0.2
 Status: Draft
 
-此文档介绍了如何从零初始化、编译并运行 AIOS 的核心 MVP 原型——**DNA Compiler (DNA 编译器)**。
+此文档介绍了如何编译并运行整个 AIOS MVP（包含 Compiler、Tools、DataService 以及基于 OpenAI/Mock 的 Runtime 引擎）。
 
 ## 1. 环境准备
 
-AIOS 的基础工具链使用 Node.js 体系，强依赖 TypeScript。
-请确保本地已安装以下环境：
 - [Node.js](https://nodejs.org/) (推荐 v18 或以上)
 - [pnpm](https://pnpm.io/) (用来管理 Monorepo，安装：`npm install -g pnpm`)
 
 ## 2. 安装依赖
 
-在项目根目录（即 `package.json` 所在目录）下执行：
+在项目根目录下执行：
 
 ```bash
 pnpm install
 ```
 
-这将会自动解析 `pnpm-workspace.yaml`，并将所有子包（例如 `@aios/compiler`）需要的依赖下载完毕。
+## 3. 运行 AIOS 完整闭环测试
 
-## 3. 编译与运行 DNA Compiler 原型
+AIOS 运行时将经历以下流程：
+1. `Compiler` 读取 `expense-dna.yaml` 并转换为 AST（注入 Policy 规则）。
+2. `Runtime` 启动 Planner Agent，注入 AST Context 和所有标准的 Tool Schema。
+3. `Agent` 思考如何满足用户需求，并自主按顺序调用 `Tools` 及其背后的 `DataService`。
 
-目前我们在 `examples/enterprise-dna-demo/` 下提供了一份极简的示例业务 YAML 描述文件（即 `expense-dna.yaml`）。
+你可以通过传入指令来运行 Runtime CLI。为了方便测试，我们使用 `tsx` 实时执行 TypeScript：
 
-`@aios/compiler` 会读取这份“纯业务语义”的描述文件，将其转换成 AIOS 运行时可以理解的 **Business Semantic AST (JSON 格式)**。
-
-请在项目根目录执行以下命令启动 Compiler：
+### 模式 A：Mock 模式（无需 API Key，自动模拟调用）
+如果在没有 `OPENAI_API_KEY` 的情况下运行，系统将执行内部写好的 Mock 脚本，展示流程流转。
 
 ```bash
-cd packages/compiler
-npx tsc
-node dist/index.js
+npx tsx packages/runtime/src/cli.ts "帮 Alice 报销 600 块打车费"
 ```
 
-**预期输出**：
-你将在控制台中看到由 YAML 成功转化为标准的 `Business Semantic AST` JSON 对象，证明系统从静态 DNA 向运行时引擎演进的第一步已跑通。
+### 模式 B：大语言模型真实调度模式（推荐）
+如果你有 OpenAI API Key，可以真实体验 AI 代理自己做决策并执行动作的魅力：
 
-## 后续计划 (Next Steps)
-- **Runtime 调度引擎**：利用 Planner Agent 解析这颗 AST 树，调用大语言模型决定执行步骤。
-- **Tool 绑定**：注册真实的 `ApproveExpense` 等工具给 Agent 实际调用。
+```bash
+export OPENAI_API_KEY="sk-xxxxxx"
+npx tsx packages/runtime/src/cli.ts "帮 Alice 报销 600 块打车费"
+```
+*提示：在这个例子中，因为超过了 YAML 中定义的 500 元限额，真实的 AI 也会决定调用 `requestFinanceApproval` 工具，而不是 `autoApproveExpense`。*
+
+## 模块说明
+- `@aios/compiler`: 负责把 YAML 转为 AST JSON。
+- `@aios/data-service`: 隔离数据库读写的中间层（内置 Mock 内存数据）。
+- `@aios/tools`: AI 可见的所有标准能力。
+- `@aios/runtime`: 大脑，包含与 OpenAI 打通的 Agent 调度引擎。
