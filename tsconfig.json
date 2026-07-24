@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "sourceMap": true,
+    "rootDir": ".",
+    "types": ["node"],
+    "paths": {
+      "@aios/*": ["./packages/*/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
