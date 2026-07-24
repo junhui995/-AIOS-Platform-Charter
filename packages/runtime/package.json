@@ -2,12 +2,18 @@
   "name": "@aios/runtime",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "@aios/compiler": "workspace:*",
+    "@aios/tools": "workspace:*",
+    "openai": "^6.48.0"
+  },
+  "types": "dist/index.d.ts"
 }

@@ -1,44 +1,50 @@
 # AIOS MVP 部署与运行手册 (Deployment Manual)
 
-Version: 0.1
-Status: Draft
+Version: 1.0
+Status: Final MVP
 
-此文档介绍了如何从零初始化、编译并运行 AIOS 的核心 MVP 原型——**DNA Compiler (DNA 编译器)**。
+此文档介绍了如何初始化并运行整个 AIOS MVP。
+（有关代码架构和模块划分，请参阅 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)）
 
 ## 1. 环境准备
 
-AIOS 的基础工具链使用 Node.js 体系，强依赖 TypeScript。
-请确保本地已安装以下环境：
 - [Node.js](https://nodejs.org/) (推荐 v18 或以上)
-- [pnpm](https://pnpm.io/) (用来管理 Monorepo，安装：`npm install -g pnpm`)
+- [pnpm](https://pnpm.io/) (用来管理 Monorepo，如果未安装请执行：`npm install -g pnpm`)
 
 ## 2. 安装依赖
 
-在项目根目录（即 `package.json` 所在目录）下执行：
+在项目根目录下执行：
 
 ```bash
 pnpm install
 ```
+*这将会自动解析 `pnpm-workspace.yaml`，下载根目录和所有子包需要的相关依赖。*
 
-这将会自动解析 `pnpm-workspace.yaml`，并将所有子包（例如 `@aios/compiler`）需要的依赖下载完毕。
+## 3. 运行 AIOS 完整闭环测试
 
-## 3. 编译与运行 DNA Compiler 原型
+AIOS 运行时将经历以下自动流转流程：
+1. **DNA Compiler** 读取 `examples/enterprise-dna-demo/expense-dna.yaml` 并转换为 AST（注入企业 Policy）。
+2. **Runtime Engine** 启动 Planner Agent，向 LLM 注入 AST Context 和所有标准的 Tool Schema。
+3. **Agent Loop** 思考如何满足用户需求，并自主在后台分步调用 `Tools` 及其背后的 `DataService`。
 
-目前我们在 `examples/enterprise-dna-demo/` 下提供了一份极简的示例业务 YAML 描述文件（即 `expense-dna.yaml`）。
+你可以通过传入指令来运行 Runtime CLI。为了方便测试，我们使用 `tsx` 库实时执行 TypeScript。
 
-`@aios/compiler` 会读取这份“纯业务语义”的描述文件，将其转换成 AIOS 运行时可以理解的 **Business Semantic AST (JSON 格式)**。
-
-请在项目根目录执行以下命令启动 Compiler：
+### 模式 A：Mock 模式（无需 API Key，自动模拟全链路调用）
+如果在没有配置环境变量 `OPENAI_API_KEY` 的情况下运行，系统将执行硬编码的 Mock 演示脚本，以展示控制流。
 
 ```bash
-cd packages/compiler
-npx tsc
-node dist/index.js
+npx tsx packages/runtime/src/cli.ts "帮 Alice 报销 600 块打车费"
 ```
 
-**预期输出**：
-你将在控制台中看到由 YAML 成功转化为标准的 `Business Semantic AST` JSON 对象，证明系统从静态 DNA 向运行时引擎演进的第一步已跑通。
+### 模式 B：大语言模型真实调度模式（推荐体验 AI 魔法）
+如果你有 OpenAI API Key，可以真实体验 AI 代理动态提取参数、做决策并串联工具的全部过程：
 
-## 后续计划 (Next Steps)
-- **Runtime 调度引擎**：利用 Planner Agent 解析这颗 AST 树，调用大语言模型决定执行步骤。
-- **Tool 绑定**：注册真实的 `ApproveExpense` 等工具给 Agent 实际调用。
+```bash
+export OPENAI_API_KEY="sk-xxxxxx"
+npx tsx packages/runtime/src/cli.ts "帮 Alice 报销 600 块打车费"
+```
+
+*预期观察点：在这个用例中，AI 将动态识别出：Alice 的 ID 是什么 -> 创建报销单号 -> 判断 600 元超过了 YAML 中定义的 500 元限额 -> 所以它会机智地决定调用 `requestFinanceApproval` 工具，而不是去调用 `autoApproveExpense`。*
+
+## 常见问题
+- **如果遇到 TypeScript 路径解析错误**：确保使用 `npx tsx` 而不是 `npx ts-node` 执行，因为本项目在 Monorepo 层面依赖了复杂的 `paths` 别名解析。

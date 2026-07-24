@@ -8,9 +8,11 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "sourceMap": true,
-    "outDir": "./dist",
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@aios/*": ["./packages/*/src"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }
