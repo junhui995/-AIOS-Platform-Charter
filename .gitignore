@@ -1,0 +1,7 @@
+node_modules
+dist/
+tsconfig.tsbuildinfo
+node_modules/
+.env
+.claude
+.agents
