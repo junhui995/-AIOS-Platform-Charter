@@ -1,5 +1,6 @@
 {
   "name": "@aios/portal",
+<<<<<<< HEAD
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,3 +12,37 @@
   "license": "ISC",
   "type": "commonjs"
 }
+=======
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@aios/compiler": "workspace:*",
+    "@aios/data-service": "workspace:*",
+    "@aios/runtime": "workspace:*",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.3.17",
+    "lucide-react": "^0.412.0",
+    "next": "14.2.35",
+    "next-auth": "^4.24.15",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
+>>>>>>> 5534d140f04909e1c653d9451864ec1d20c3d3e1

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Mock Data Service for AIOS MVP
  * Handles mock database operations.
@@ -66,3 +67,18 @@ class DataService {
 
 // Export a singleton instance
 export const db = new DataService();
+=======
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['query'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+export * from '@prisma/client';
+>>>>>>> 5534d140f04909e1c653d9451864ec1d20c3d3e1
