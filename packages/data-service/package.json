@@ -1,0 +1,22 @@
+{
+  "name": "@aios/data-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "generate": "prisma generate",
+    "test": "echo \"Error: no test specified\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/node": "^20",
+    "prisma": "^5.22.0",
+    "typescript": "^5"
+  }
+}
