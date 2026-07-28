@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台2.0 - 合同首页</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --primary: #0F172A;
+  --primary-blue: #2563EB;
+  --on-primary: #FFFFFF;
+  --secondary: #334155;
+  --accent: #0369A1;
+  --accent-green: #059669;
+  --background: #F8FAFC;
+  --foreground: #020617;
+  --card-bg: #FFFFFF;
+  --muted: #E8ECF1;
+  --muted-text: #64748B;
+  --border: #E2E8F0;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 20px 16px;
+  display: flex; flex-direction: column;
+}
+
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 16px;
+}
+
+.sidebar-brand-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.08); }
+.nav-item.active { background: rgba(3,105,161,0.2); color: var(--on-primary); font-weight: 500; }
+
+.nav-icon {
+  width: 20px; height: 20px; border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+
+.nav-item.active .nav-icon { background: var(--accent); }
+.nav-section-title { font-size: 11px; color: rgba(255,255,255,0.4); padding: 12px 12px 4px; }
+.nav-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
+
+.main-content { display: flex; flex-direction: column; overflow: hidden; }
+
+.top-bar {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.module-tabs { display: flex; gap: 2px; background: var(--muted); padding: 2px; border-radius: var(--radius-sm); }
+.module-tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; color: var(--muted-text); cursor: pointer; }
+.module-tab.active { background: var(--card-bg); color: var(--accent); font-weight: 500; }
+
+.user-area { display: flex; align-items: center; gap: 12px; }
+.user-avatar { width: 32px; height: 32px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 500; }
+
+.content-area { flex: 1; padding: 24px; overflow-y: auto; }
+
+.page-tabs {
+  display: flex; gap: 16px; margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+
+.page-tab { padding: 8px 16px; font-size: 14px; color: var(--muted-text); cursor: pointer; position: relative; }
+.page-tab.active { color: var(--accent); font-weight: 500; }
+.page-tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: var(--accent); }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) 240px;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.stat-label { font-size: 12px; color: var(--muted-text); margin-bottom: 8px; }
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stat-value.blue { color: var(--accent); }
+.stat-value.green { color: var(--accent-green); }
+.stat-value.red { color: var(--danger); }
+
+.stat-sub { font-size: 12px; color: var(--muted-text); margin-top: 4px; }
+
+.alert-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 2px solid var(--danger);
+  padding: 20px;
+}
+
+.alert-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--danger);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+
+.alert-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.alert-row:last-child { border-bottom: none; }
+
+.alert-item-label { font-size: 13px; color: var(--secondary); }
+.alert-item-value { font-size: 14px; font-weight: 500; }
+.alert-item-value.red { color: var(--danger); }
+.alert-item-value.orange { color: var(--warning); }
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.panel-title { font-size: 14px; font-weight: 500; }
+.panel-action { font-size: 12px; color: var(--accent); cursor: pointer; }
+.panel-body { padding: 0; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+
+.search-input {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  width: 200px;
+}
+
+select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--card-bg);
+}
+
+.btn-sm {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.btn-sm.primary { background: var(--accent); color: white; border-color: var(--accent); }
+
+table { width: 100%; border-collapse: collapse; }
+th { background: var(--muted); font-size: 12px; font-weight: 500; color: var(--muted-text); padding: 10px 12px; text-align: left; }
+td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--border); }
+
+.status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+.status-badge.active { background: #D1FAE5; color: #047857; }
+.status-badge.pending { background: #DBEAFE; color: #1D4ED8; }
+.status-badge.renew { background: #FEF3C7; color: #92400E; }
+.status-badge.terminated { background: #FEF2F2; color: #DC2626; }
+
+.action-link { font-size: 12px; color: var(--accent); cursor: pointer; }
+.action-link:hover { text-decoration: underline; }
+
+.lifecycle-diagram {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 16px;
+}
+
+.lifecycle-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lifecycle-node {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--muted);
+  color: var(--secondary);
+}
+
+.lifecycle-node.start { background: #DBEAFE; color: #1D4ED8; }
+.lifecycle-node.end { background: #D1FAE5; color: #047857; }
+.lifecycle-node.danger { background: #FEF2F2; color: #DC2626; }
+
+.lifecycle-arrow { font-size: 12px; color: var(--muted-text); }
+
+.design-rules {
+  padding: 16px;
+}
+
+.rule-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.rule-item:last-child { border-bottom: none; }
+.rule-num { font-weight: 500; color: var(--accent); width: 20px; flex-shrink: 0; }
+.rule-text { color: var(--secondary); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">HF</div>
+      <div class="sidebar-brand-text">华复保利工作台</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>首页工作台</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>组织中心</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>人员管理</div>
+
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item active"><div class="nav-icon">&#9632;</div>合同首页<span class="nav-badge">!</span></div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>合同台账</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>相对方管理</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>收付款管理</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>发票中心</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>合同模板</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>合同借阅</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>权限转移</div>
+
+      <div class="nav-section-title">财务</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>统计分析</div>
+      <div class="nav-item"><div class="nav-icon">&#9632;</div>预算管理</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="module-tabs">
+        <div class="module-tab">CRM</div>
+        <div class="module-tab">OA</div>
+        <div class="module-tab active" style="background:var(--accent);color:white;">财务中心</div>
+      </div>
+      <div class="user-area">
+        <div class="user-avatar">王</div>
+        <div class="user-name">王亚 (行政主管)</div>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="page-tabs">
+        <div class="page-tab active">合同首页 (驾驶舱)</div>
+        <div class="page-tab">合同台账列表</div>
+        <div class="page-tab">收付款管理</div>
+        <div class="page-tab">发票中心</div>
+        <div class="page-tab">预警中心</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">合同应收总额 (元)</div>
+          <div class="stat-value blue">30,605,700</div>
+          <div class="stat-sub">全集团汇总</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已回款金额 (元)</div>
+          <div class="stat-value green">18,450,300</div>
+          <div class="stat-sub">回款率 60.4%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已付款金额 (元)</div>
+          <div class="stat-value">12,155,000</div>
+          <div class="stat-sub">付款率 正常</div>
+        </div>
+        <div class="alert-card">
+          <div class="alert-title">&#9888; 预警</div>
+          <div class="alert-row">
+            <span class="alert-item-label">逾期应收额</span>
+            <span class="alert-item-value red">&#165;1,120,800</span>
+          </div>
+          <div class="alert-row">
+            <span class="alert-item-label">长期未回款</span>
+            <span class="alert-item-value orange">8 笔</span>
+          </div>
+          <div class="alert-row">
+            <span class="alert-item-label">未开票合同</span>
+            <span class="alert-item-value orange">21 笔</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">合同台账列表</div>
+            <div class="panel-action">新建合同 &gt;</div>
+          </div>
+          <div class="panel-body">
+            <div class="toolbar">
+              <input class="search-input" placeholder="搜索合同编号/名称...">
+              <select><option>全公司</option><option>项目部</option><option>行政部</option></select>
+              <select><option>全部状态</option><option>已生效</option><option>执行中</option><option>待续签</option></select>
+              <button class="btn-sm primary">查询</button>
+              <button class="btn-sm">导出</button>
+            </div>
+            <table>
+              <thead>
+                <tr><th>合同编号</th><th>合同名称</th><th>相对方</th><th>金额(元)</th><th>状态</th><th>操作</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>HT-2026-0701</td>
+                  <td>工程咨询服务合同</td>
+                  <td>某某设计院</td>
+                  <td>640,000.10</td>
+                  <td><span class="status-badge active">已生效</span></td>
+                  <td><span class="action-link">变更 | </span><span class="action-link">收付登记 | </span><span class="action-link">详情</span></td>
+                </tr>
+                <tr>
+                  <td>HT-2026-0702</td>
+                  <td>材料采购合同</td>
+                  <td>某某建材公司</td>
+                  <td>380,000.00</td>
+                  <td><span class="status-badge active">执行中</span></td>
+                  <td><span class="action-link">中止 | </span><span class="action-link">付款 | </span><span class="action-link">详情</span></td>
+                </tr>
+                <tr>
+                  <td>HT-2026-0501</td>
+                  <td>物业管理服务合同</td>
+                  <td>某某物业公司</td>
+                  <td>580,000.00</td>
+                  <td><span class="status-badge renew">待续签</span></td>
+                  <td><span class="action-link">续签 | </span><span class="action-link">详情</span></td>
+                </tr>
+                <tr>
+                  <td>HT-2026-0401</td>
+                  <td>设备租赁合同 (已终止)</td>
+                  <td>某某设备公司</td>
+                  <td>120,000.00</td>
+                  <td><span class="status-badge terminated">已终止</span></td>
+                  <td><span class="action-link">查看档案</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">全生命周期状态控制</div>
+            </div>
+            <div class="panel-body">
+              <div class="lifecycle-diagram" style="flex-wrap:wrap;">
+                <div class="lifecycle-step"><div class="lifecycle-node start">草稿</div><div class="lifecycle-arrow">&#8594;</div></div>
+                <div class="lifecycle-step"><div class="lifecycle-node">审批中</div><div class="lifecycle-arrow">&#8594;</div></div>
+                <div class="lifecycle-step"><div class="lifecycle-node">已生效</div><div class="lifecycle-arrow">&#8594;</div></div>
+                <div class="lifecycle-step"><div class="lifecycle-node">执行中</div><div class="lifecycle-arrow">&#8594;</div></div>
+                <div class="lifecycle-step"><div class="lifecycle-node">归档</div><div class="lifecycle-arrow">&#8594;</div></div>
+                <div class="lifecycle-step"><div class="lifecycle-node end">已完成</div></div>
+              </div>
+              <div style="margin-top:8px;padding:8px;background:var(--danger-light);border-radius:6px;font-size:12px;color:var(--danger);">
+                异常路径：已中止 / 已终止 / 已作废 — 历史可追溯，归档后永久锁死
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">5大统一设计规范</div>
+            </div>
+            <div class="panel-body">
+              <div class="design-rules">
+                <div class="rule-item"><div class="rule-num">1.</div><div class="rule-text">统一页面结构：标准导航区 &#8594; 工具栏 &#8594; 数据列表 &#8594; 分页</div></div>
+                <div class="rule-item"><div class="rule-num">2.</div><div class="rule-text">统一下推规则：一键向后流传后续所有业务</div></div>
+                <div class="rule-item"><div class="rule-num">3.</div><div class="rule-text">统一批量操作：多选行后批量续签/终止/导出</div></div>
+                <div class="rule-item"><div class="rule-num">4.</div><div class="rule-text">统一权限隔离：按组织/部门/项目控制数据</div></div>
+                <div class="rule-item"><div class="rule-num">5.</div><div class="rule-text">统一预警推送：异常自动直达首页驾驶舱</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">发票核销概况</div>
+            </div>
+            <div class="panel-body" style="padding:12px;">
+              <table>
+                <thead><tr><th>合同编号</th><th>发票号码</th><th>金额</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td>HT-2026-0701</td><td>243456578</td><td>&#165;640,000.10</td><td><span class="status-badge active">已开票</span></td></tr>
+                  <tr><td>HT-2026-0702</td><td>243456577</td><td>&#165;380,000.00</td><td><span class="status-badge active">已开票</span></td></tr>
+                  <tr><td>HT-2026-0703</td><td>-</td><td>&#165;450,000.00</td><td><span class="status-badge renew">未开票</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
