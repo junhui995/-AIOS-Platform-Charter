@@ -1,10 +1,6 @@
-node_modules
+node_modules/
 dist/
 tsconfig.tsbuildinfo
-<<<<<<< HEAD
-=======
-node_modules/
 .env
 .claude
 .agents
->>>>>>> 5534d140f04909e1c653d9451864ec1d20c3d3e1
