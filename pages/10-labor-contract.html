@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 劳动合同管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-primary:hover{background:#1D4ED8}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+.lifecycle{display:flex;align-items:center;gap:0;justify-content:center}
+.lifecycle-step{padding:8px 16px;border-radius:var(--radius-xs);font-size:12px;font-weight:600;text-align:center;transition:all .2s}
+.lifecycle-step.done{background:var(--green-light);color:var(--green)}
+.lifecycle-step.current{background:var(--brand);color:white}
+.lifecycle-step.future{background:var(--bg);color:var(--text3)}
+.lifecycle-arrow{color:var(--text3);font-size:16px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div><div class="nav-item"><span class="icon">👤</span>人员中心</div><div class="nav-item"><span class="icon">📌</span>岗位管理</div><div class="nav-item"><span class="icon">📅</span>考勤管理</div><div class="nav-item"><span class="icon">🏆</span>绩效管理</div><div class="nav-item"><span class="icon">💰</span>工资计算</div><div class="nav-item"><span class="icon">🧾</span>工资条</div>
+    <div class="nav-item active"><span class="icon">📄</span>劳动合同</div><div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div><div class="nav-item"><span class="icon">📑</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">劳动合同管理</div><div class="topbar-subtitle">一键批量续签 · 全生命周期合规管控</div></div><div class="topbar-right"><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">📄</div><div><div class="val">72</div><div class="label">生效中</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⏳</div><div><div class="val">5</div><div class="label">待续签</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">🚨</div><div><div class="val">2</div><div class="label">即将到期(30天内)</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--text3)">⬜</div><div><div class="val">3</div><div class="label">未签署</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--purple)">✅</div><div><div class="val">7</div><div class="label">已终止</div></div></div>
+    </div>
+
+    <!-- Lifecycle -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">劳动合同全生命周期状态流转</div></div>
+      <div class="card-body">
+        <div class="lifecycle" style="padding:12px 0">
+          <div class="lifecycle-step future">未签署</div><span class="lifecycle-arrow">→</span>
+          <div class="lifecycle-step done">签署生效</div><span class="lifecycle-arrow">→</span>
+          <div class="lifecycle-step current">生效中</div><span class="lifecycle-arrow">→</span>
+          <div class="lifecycle-step future">待续签</div><span class="lifecycle-arrow">→</span>
+          <div class="lifecycle-step future">续签生效</div><span class="lifecycle-arrow">→</span>
+          <div class="lifecycle-step future">已终止</div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <div style="flex:1;background:var(--green-light);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text2)">
+            <span style="font-weight:600;color:var(--green)">生效中</span>：合同正常履行，到期前30天自动推送续签提醒
+          </div>
+          <div style="flex:1;background:var(--orange-light);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text2)">
+            <span style="font-weight:600;color:var(--orange)">待续签</span>：到期前30天进入续签窗口，HR勾选即可秒级完成
+          </div>
+          <div style="flex:1;background:var(--red-light);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text2)">
+            <span style="font-weight:600;color:var(--red)">已终止</span>：离职后合同自动终止，历史可追溯不可删除
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contract Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header"><div class="card-header-title">劳动合同台账 <span class="count">86份</span></div>
+        <div class="toolbar"><div class="pill-tabs" style="margin-bottom:0"><div class="pill-tab active">全部</div><div class="pill-tab">生效中</div><div class="pill-tab">待续签</div><div class="pill-tab">即将到期</div></div>
+        <button class="btn btn-sm btn-primary">批量续签</button><button class="btn btn-sm btn-outline">导出</button></div></div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>合同编号</th><th>员工姓名</th><th>部门</th><th>合同类型</th><th>签署日期</th><th>到期日期</th><th>期限</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>CONTR2026001</td><td style="font-weight:600">张三</td><td>工程管理部</td><td>固定期限</td><td>2026-01-15</td><td>2028-12-31</td><td>3年</td><td><span class="status-pill status-active">生效中</span></td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+              <tr><td>CONTR2026002</td><td style="font-weight:600">李四</td><td>质量安全部</td><td>固定期限</td><td>2026-02-01</td><td>2028-02-14</td><td>2年</td><td><span class="status-pill status-active">生效中</span></td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+              <tr><td>CONTR2026003</td><td style="font-weight:600">王五</td><td>综合行政部</td><td>固定期限</td><td>2024-08-01</td><td style="color:var(--red)">2028-02-28</td><td>2年</td><td><span class="status-pill status-pending">待续签</span></td><td><button class="btn btn-sm btn-primary">续签</button> <button class="btn btn-sm btn-outline">查看</button></td></tr>
+              <tr><td>CONTR2026004</td><td style="font-weight:600">赵六</td><td>市场营销部</td><td>无固定期限</td><td>2023-03-15</td><td style="color:var(--text3)">无期限</td><td>—</td><td><span class="status-pill status-active">生效中</span></td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+              <tr><td>CONTR2026005</td><td style="font-weight:600">刘伟</td><td>工程管理部</td><td>固定期限</td><td>2025-08-20</td><td style="color:var(--red)">2027-08-19</td><td>2年</td><td><span style="background:var(--orange-light);color:var(--orange);padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600">即将到期(30天)</span></td><td><button class="btn btn-sm btn-primary">续签</button> <button class="btn btn-sm btn-outline">查看</button></td></tr>
+              <tr><td>CONTR2026006</td><td style="font-weight:600">周芳</td><td>综合行政部</td><td>试用期合同</td><td>2026-07-01</td><td>2026-09-30</td><td>3个月</td><td><span class="status-pill status-active">生效中</span></td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Renew -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">批量续签操作面板</div></div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px;align-items:center;background:var(--orange-light);border-radius:var(--radius-sm);padding:16px">
+          <div style="font-size:14px;font-weight:600;color:var(--orange)">⚠️ 5份合同即将到期，请在到期前完成续签</div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-sm btn-primary">勾选批量续签（5人）</button>
+            <button class="btn btn-sm btn-outline">逐个续签</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text3)">续签规则：勾选多人 → 选择续签期限 → 系统自动生成新合同编号 → 原合同自动归档 → 新合同自动生效</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

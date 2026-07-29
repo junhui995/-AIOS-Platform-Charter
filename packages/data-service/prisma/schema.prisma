@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------
+// HR Domain
+// -----------------------------------------------------------------
+
+model Employee {
+  id             String    @id @default(uuid())
+  code           String    @unique // e.g. EMP-001
+  name           String
+  phoneNumber    String    @unique
+  email          String    @unique
+  departmentId   String?
+  positionId     String?
+  hireDate       DateTime
+  status         String    @default("ACTIVE") // ACTIVE, PROBATION, RESIGNED
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      String?
+  updatedBy      String?
+
+  department     Department? @relation(fields: [departmentId], references: [id])
+  contracts      Contract[]
+  leaveRequests  LeaveRequest[]
+  leaveBalance   LeaveBalance?
+  salarySlips    SalarySlip[]
+}
+
+model Department {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  name           String
+  parentId       String?
+  headcountLimit Int       @default(0)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employees      Employee[]
+  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children       Department[] @relation("DepartmentHierarchy")
+}
+
+// -----------------------------------------------------------------
+// Contract Domain
+// -----------------------------------------------------------------
+
+model Contract {
+  id             String    @id @default(uuid())
+  code           String    @unique // e.g. HT-2026-001
+  counterpartyId String
+  amount         Decimal
+  signDate       DateTime
+  startDate      DateTime
+  endDate        DateTime
+  status         String    @default("DRAFT") // DRAFT, ACTIVE, EXPIRED, CANCELLED
+  ownerId        String
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner          Employee  @relation(fields: [ownerId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// New EHR Domains: Time & Attendance, Recruitment, Compensation
+// -----------------------------------------------------------------
+
+model LeaveRequest {
+  id             String    @id @default(uuid())
+  employeeId     String
+  leaveType      String    // ANNUAL, SICK, UNPAID, MATERNITY
+  startDate      DateTime
+  endDate        DateTime
+  reason         String?
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  aiAnalysis     String?   // Store AI reasoning for approval/rejection recommendations
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+}
+
+model LeaveBalance {
+  id             String    @id @default(uuid())
+  employeeId     String    @unique
+  annualTotal    Int       @default(0) // In days or hours
+  annualUsed     Int       @default(0)
+  sickTotal      Int       @default(0)
+  sickUsed       Int       @default(0)
+
+  updatedAt      DateTime  @updatedAt
+
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+}
+
+model Candidate {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  phoneNumber    String?
+  resumeUrl      String?   // S3 or blob storage link
+  appliedRole    String?
+  status         String    @default("NEW") // NEW, SCREENING, INTERVIEWING, OFFERED, REJECTED
+  aiParsedSkills String[]  // Extracted by AI
+  aiSummary      String?   // Extracted by AI
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SalarySlip {
+  id             String    @id @default(uuid())
+  employeeId     String
+  month          String    // e.g., "2026-07"
+  baseSalary     Decimal
+  bonus          Decimal   @default(0)
+  deductions     Decimal   @default(0)
+  netPay         Decimal
+  status         String    @default("DRAFT") // DRAFT, ISSUED
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee       Employee  @relation(fields: [employeeId], references: [id])
+}
