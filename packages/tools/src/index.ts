@@ -1,4 +1,4 @@
-import { db } from '@aios/data-service';
+import { prisma, db as mockDb } from '@aios/data-service';
 
 export interface ToolDefinition {
     name: string;
@@ -14,14 +14,23 @@ export const Tools: Record<string, ToolDefinition> = {
         schema: {
             type: 'object',
             properties: {
-                name: { type: 'string', description: 'The name of the employee (e.g. Alice, Bob)' }
+                name: { type: 'string', description: 'The name of the employee (e.g. 张三, Alice)' }
             },
             required: ['name']
         },
-        execute: (args: { name: string }) => {
-            const emp = db.getEmployeeByName(args.name);
-            if (!emp) return { error: `Employee ${args.name} not found.` };
-            return { id: emp.id, department: emp.department };
+        execute: async (args: { name: string }) => {
+            // First check the real DB
+            const emp = await prisma.employee.findFirst({
+                where: { name: args.name },
+                include: { department: true }
+            });
+            if (emp) {
+                return { id: emp.id, code: emp.code, department: emp.department?.name || 'Unknown' };
+            }
+            // Fallback to Mock DB for legacy tests
+            const mockEmp = mockDb.getEmployeeByName(args.name);
+            if (!mockEmp) return { error: `Employee ${args.name} not found.` };
+            return { id: mockEmp.id, department: mockEmp.department, source: 'mock' };
         }
     },
     createExpenseOrder: {
@@ -36,8 +45,10 @@ export const Tools: Record<string, ToolDefinition> = {
             },
             required: ['employeeId', 'amount', 'reason']
         },
-        execute: (args: { employeeId: string; amount: number; reason: string }) => {
-            const exp = db.createExpense(args.employeeId, args.amount, args.reason);
+        execute: async (args: { employeeId: string; amount: number; reason: string }) => {
+            // In a real app we'd create this in a real Expense table in Prisma
+            // For now, we'll keep using the mock DB to store expenses until the expense schema is added to Prisma
+            const exp = mockDb.createExpense(args.employeeId, args.amount, args.reason);
             return { success: true, expenseId: exp.id, status: exp.status };
         }
     },
@@ -69,7 +80,7 @@ export const Tools: Record<string, ToolDefinition> = {
             required: ['expenseId']
         },
         execute: (args: { expenseId: string }) => {
-            const success = db.updateExpenseStatus(args.expenseId, 'Approved');
+            const success = mockDb.updateExpenseStatus(args.expenseId, 'Approved');
             if (success) {
                 return { success: true, message: `Expense ${args.expenseId} has been auto-approved.` };
             } else {

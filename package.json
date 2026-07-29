@@ -8,7 +8,11 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\""
+    "build": "pnpm -r build",
+    "db:push": "pnpm --filter @aios/data-service exec prisma db push",
+    "db:generate": "pnpm --filter @aios/data-service exec prisma generate",
+    "db:seed": "pnpm --filter @aios/data-service run seed",
+    "dev": "pnpm --filter @aios/portal run dev"
   },
   "repository": {
     "type": "git",

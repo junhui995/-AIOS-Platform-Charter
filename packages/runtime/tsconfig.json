@@ -2,7 +2,14 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
   },
+  "references": [
+    { "path": "../compiler" },
+    { "path": "../tools" }
+  ],
   "include": ["src/**/*"]
 }
