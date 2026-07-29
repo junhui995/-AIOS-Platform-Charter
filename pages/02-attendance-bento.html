@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台 2.0 - 考勤管理（Bento Box）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F5F5F7;
+    --surface: #FFFFFF;
+    --fg: #1D1D1F;
+    --fg-2: #6E6E73;
+    --fg-3: #AEAEB2;
+    --border: #E5E5EA;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.08);
+    --blue: #0071E3;
+    --blue-bg: #E8F1FE;
+    --green: #34C759;
+    --green-bg: #E8F8EE;
+    --orange: #FF9500;
+    --orange-bg: #FFF4E5;
+    --red: #FF3B30;
+    --red-bg: #FFEBEA;
+    --purple: #AF52DE;
+    --purple-bg: #F5EEFE;
+    --teal: #5AC8FA;
+    --teal-bg: #E0F4FE;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; }
+  .logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #0071E3, #5856D6); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+  .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .nav-section { margin-bottom: 16px; }
+  .nav-section-title { font-size: 11px; font-weight: 600; color: var(--fg-3); padding: 0 20px 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 20px; font-size: 13px; color: var(--fg-2); cursor: pointer; border-radius: 8px; margin: 0 8px; }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .main { flex: 1; overflow-x: hidden; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 28px; }
+  .breadcrumb { font-size: 13px; color: var(--fg-3); }
+  .breadcrumb b { color: var(--fg); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .search-box { width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 7px 16px; font-size: 13px; font-family: var(--font); }
+  .search-box:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-bg); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-sm); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #FF9500, #FF2D55); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 600; }
+  .content { padding: 8px 28px 28px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; }
+  .page-desc { font-size: 14px; color: var(--fg-2); margin-top: 2px; }
+  .btn { padding: 8px 18px; font-size: 13px; font-family: var(--font); font-weight: 500; border: none; cursor: pointer; border-radius: 980px; }
+  .btn-ghost { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .bento-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--surface); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .card-icon-sm { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .stat-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+  .stat-unit { font-size: 14px; font-weight: 400; color: var(--fg-3); }
+  .span-2 { grid-column: span 2; }
+  .span-full { grid-column: span 4; }
+  .chart-row { display: flex; justify-content: space-between; align-items: center; }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-label { font-size: 11px; font-weight: 600; color: var(--fg-3); text-align: center; padding-bottom: 4px; }
+  .day-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; position: relative; }
+  .day-cell.normal { background: var(--bg); color: var(--fg); }
+  .day-cell.normal:hover { background: var(--blue-bg); }
+  .day-cell.weekend { background: #FAFAFA; color: var(--fg-3); }
+  .day-cell.late { background: var(--orange-bg); color: var(--orange); }
+  .day-cell.absent { background: var(--red-bg); color: var(--red); }
+  .day-cell.leave { background: var(--purple-bg); color: var(--purple); }
+  .day-cell.today { background: var(--blue); color: #fff; font-weight: 600; }
+  .day-num { font-weight: 500; }
+  .day-mark { font-size: 9px; margin-top: 1px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  table.data-table { width: 100%; border-collapse: collapse; }
+  table.data-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-3); font-weight: 600; text-align: left; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  table.data-table td { font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  .badge { font-size: 11px; padding: 2px 10px; border-radius: 6px; font-weight: 500; }
+  .badge.approved { background: var(--green-bg); color: var(--green); }
+  .badge.pending { background: var(--orange-bg); color: var(--orange); }
+  .badge.rejected { background: var(--red-bg); color: var(--red); }
+  .leave-balance { display: flex; flex-direction: column; gap: 12px; }
+  .balance-row { display: flex; align-items: center; justify-content: space-between; }
+  .balance-label { font-size: 13px; color: var(--fg-2); display: flex; align-items: center; gap: 6px; }
+  .balance-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .progress-bar { width: 100px; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .balance-val { font-size: 13px; font-weight: 600; min-width: 50px; text-align: right; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">HF</div>
+      <div class="logo-text">华复保利</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">工作台</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="6" height="6" rx="2"/><rect x="10" y="2" width="6" height="6" rx="2"/><rect x="2" y="10" width="6" height="6" rx="2"/><rect x="10" y="10" width="6" height="6" rx="2"/></svg>
+        <span>首页</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="6" r="2.5"/><circle cx="13" cy="6" r="2.5"/><path d="M1 16c0-3 2-5 4-5M17 16c0-3-2-5-4-5"/></svg>
+        <span>组织中心</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.5 3-6 6-6s6 2.5 6 6"/></svg>
+        <span>人员档案</span>
+      </div>
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="13" rx="2"/><line x1="2" y1="7" x2="16" y2="7"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>
+        <span>考勤管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 16V7l7-4 7 4v9"/><rect x="5" y="10" width="8" height="6" rx="1"/></svg>
+        <span>绩效管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M9 5v4l3 2"/></svg>
+        <span>工资核算</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="2"/></svg>
+        <span>合同首页</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="12" rx="2"/></svg>
+        <span>合同台账</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h14M2 9h14M2 12h10"/></svg>
+        <span>收付款管理</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">人事管理 / <b>考勤管理</b></div>
+      </div>
+      <div class="topbar-right">
+        <input type="text" class="search-box" placeholder="搜索员工...">
+        <div class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M9 5v4l3 2"/></svg>
+        </div>
+        <div class="avatar">管</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">考勤管理</div>
+          <div class="page-desc">2026年7月 · 实时考勤数据</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost">导出月报</button>
+          <button class="btn btn-primary">+ 补卡审批</button>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--green-bg);color:var(--green)">✓</div>出勤率</div>
+          <div class="stat-value">96.8<span class="stat-unit">%</span></div>
+          <div style="font-size:12px;color:var(--fg-2);margin-top:6px">本月 22个工作日</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--orange-bg);color:var(--orange)">!</div>迟到</div>
+          <div class="stat-value">12<span class="stat-unit"> 次</span></div>
+          <div style="font-size:12px;color:var(--fg-2);margin-top:6px">涉及 8 人</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--red-bg);color:var(--red)">✕</div>缺卡</div>
+          <div class="stat-value">5<span class="stat-unit"> 次</span></div>
+          <div style="font-size:12px;color:var(--fg-2);margin-top:6px">涉及 5 人</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--purple-bg);color:var(--purple)">休</div>请假</div>
+          <div class="stat-value">18<span class="stat-unit"> 天</span></div>
+          <div style="font-size:12px;color:var(--fg-2);margin-top:6px">涉及 7 人</div>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card span-full">
+          <div class="chart-row" style="margin-bottom:12px">
+            <div class="card-title" style="margin-bottom:0">7月考勤日历</div>
+            <div class="legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--bg)"></div>正常</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--orange-bg)"></div>迟到</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--red-bg)"></div>缺卡</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--purple-bg)"></div>请假</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>今天</div>
+            </div>
+          </div>
+          <div class="month-grid">
+            <div class="day-label">一</div><div class="day-label">二</div><div class="day-label">三</div><div class="day-label">四</div><div class="day-label">五</div><div class="day-label">六</div><div class="day-label">日</div>
+            <div class="day-cell weekend"><div class="day-num">29</div></div><div class="day-cell weekend"><div class="day-num">30</div></div>
+            <div class="day-cell normal"><div class="day-num">1</div></div>
+            <div class="day-cell normal"><div class="day-num">2</div></div>
+            <div class="day-cell normal"><div class="day-num">3</div></div>
+            <div class="day-cell weekend"><div class="day-num">4</div></div>
+            <div class="day-cell weekend"><div class="day-num">5</div></div>
+            <div class="day-cell normal"><div class="day-num">6</div></div>
+            <div class="day-cell late"><div class="day-num">7</div><div class="day-mark">迟到</div></div>
+            <div class="day-cell normal"><div class="day-num">8</div></div>
+            <div class="day-cell normal"><div class="day-num">9</div></div>
+            <div class="day-cell normal"><div class="day-num">10</div></div>
+            <div class="day-cell weekend"><div class="day-num">11</div></div>
+            <div class="day-cell weekend"><div class="day-num">12</div></div>
+            <div class="day-cell normal"><div class="day-num">13</div></div>
+            <div class="day-cell normal"><div class="day-num">14</div></div>
+            <div class="day-cell leave"><div class="day-num">15</div><div class="day-mark">请假</div></div>
+            <div class="day-cell normal"><div class="day-num">16</div></div>
+            <div class="day-cell normal"><div class="day-num">17</div></div>
+            <div class="day-cell weekend"><div class="day-num">18</div></div>
+            <div class="day-cell weekend"><div class="day-num">19</div></div>
+            <div class="day-cell normal"><div class="day-num">20</div></div>
+            <div class="day-cell late"><div class="day-num">21</div><div class="day-mark">迟到</div></div>
+            <div class="day-cell normal"><div class="day-num">22</div></div>
+            <div class="day-cell normal"><div class="day-num">23</div></div>
+            <div class="day-cell normal"><div class="day-num">24</div></div>
+            <div class="day-cell today"><div class="day-num">25</div><div class="day-mark">今天</div></div>
+            <div class="day-cell weekend"><div class="day-num">26</div></div>
+            <div class="day-cell weekend"><div class="day-num">27</div></div>
+            <div class="day-cell normal"><div class="day-num">28</div></div>
+            <div class="day-cell normal"><div class="day-num">29</div></div>
+            <div class="day-cell normal"><div class="day-num">30</div></div>
+            <div class="day-cell normal"><div class="day-num">31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card span-2">
+          <div class="chart-row" style="margin-bottom:8px">
+            <div class="card-title" style="margin-bottom:0">请假记录</div>
+            <span style="font-size:12px;color:var(--blue);cursor:pointer">全部 →</span>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>姓名</th><th>类型</th><th>日期</th><th>天数</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td>张伟</td><td>事假</td><td>07-22 ~ 07-23</td><td>2</td><td><span class="badge approved">已批准</span></td></tr>
+              <tr><td>李娜</td><td>病假</td><td>07-15</td><td>1</td><td><span class="badge approved">已批准</span></td></tr>
+              <tr><td>王强</td><td>年假</td><td>07-28 ~ 07-30</td><td>3</td><td><span class="badge pending">待审批</span></td></tr>
+              <tr><td>赵敏</td><td>调休</td><td>07-10</td><td>1</td><td><span class="badge approved">已批准</span></td></tr>
+              <tr><td>陈刚</td><td>事假</td><td>07-05</td><td>1</td><td><span class="badge rejected">已驳回</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card span-2">
+          <div class="card-title">假期余额（智能锁存）</div>
+          <div class="leave-balance" style="margin-top:8px">
+            <div class="balance-row">
+              <div class="balance-label"><div class="balance-dot" style="background:var(--green)"></div>年假</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--green)"></div></div>
+              <div class="balance-val">9 / 12天</div>
+            </div>
+            <div class="balance-row">
+              <div class="balance-label"><div class="balance-dot" style="background:var(--blue)"></div>调休</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:50%;background:var(--blue)"></div></div>
+              <div class="balance-val">3 / 6天</div>
+            </div>
+            <div class="balance-row">
+              <div class="balance-label"><div class="balance-dot" style="background:var(--orange)"></div>病假</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:30%;background:var(--orange)"></div></div>
+              <div class="balance-val">3 / 10天</div>
+            </div>
+            <div class="balance-row">
+              <div class="balance-label"><div class="balance-dot" style="background:var(--purple)"></div>事假</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--purple)"></div></div>
+              <div class="balance-val">3 / 5天</div>
+            </div>
+            <div style="font-size:11px;color:var(--fg-3);margin-top:4px;padding:8px 12px;background:var(--bg);border-radius:10px">
+              系统自动锁存跨年余额 · 上一年未休年假已自动结转
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
