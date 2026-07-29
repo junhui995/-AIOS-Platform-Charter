@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 数据报表</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+/* Chart area */
+.chart-area{display:flex;gap:20px;align-items:center;justify-content:center;padding:20px}
+/* Ring chart mockup */
+.ring-chart{position:relative;width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ring-chart .center{position:absolute;font-size:20px;font-weight:700}
+.ring-chart .center-label{font-size:11px;color:var(--text3)}
+/* Bar chart */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 16px}
+.bar{width:32px;border-radius:var(--radius-xs) var(--radius-xs) 0 0;display:flex;align-items:flex-start;justify-content:center;font-size:10px;color:white;font-weight:600;padding-top:4px}
+/* Line chart */
+.line-chart{height:120px;position:relative;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 8px}
+.line-point{position:absolute;width:8px;height:8px;border-radius:50%;border:2px solid var(--brand);background:var(--card)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div><div class="nav-item"><span class="icon">👤</span>人员中心</div><div class="nav-item"><span class="icon">📌</span>岗位管理</div><div class="nav-item"><span class="icon">📅</span>考勤管理</div><div class="nav-item"><span class="icon">🏆</span>绩效管理</div><div class="nav-item"><span class="icon">💰</span>工资计算</div><div class="nav-item"><span class="icon">🧾</span>工资条</div><div class="nav-item"><span class="icon">📄</span>劳动合同</div>
+    <div class="nav-item active"><span class="icon">📊</span>数据报表</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">数据报表</div><div class="topbar-subtitle">人力成本 · 结构分析 · 流动率趋势 · 事前预警</div></div><div class="topbar-right"><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">💰</div><div><div class="val">¥1.54M</div><div class="label">月度人力成本</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">➡️</div><div><div class="val">3.5%</div><div class="label">入职流动率</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">⬅️</div><div><div class="val">1.2%</div><div class="label">离职流动率</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--purple)">📊</div><div><div class="val">¥17,930</div><div class="label">人均月成本</div></div></div>
+    </div>
+
+    <!-- Charts Row -->
+    <div style="display:flex;gap:20px">
+      <!-- Staff Structure Ring -->
+      <div class="card" style="flex:1">
+        <div class="card-header"><div class="card-header-title">人员结构分布</div><button class="btn btn-sm btn-outline">导出</button></div>
+        <div class="card-body">
+          <div class="chart-area">
+            <!-- CSS Ring Chart -->
+            <div style="position:relative;width:160px;height:160px">
+              <svg viewBox="0 0 160 160" width="160" height="160">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#E5E5EA" stroke-width="20"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#2563EB" stroke-width="20" stroke-dasharray="180 440" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#059669" stroke-width="20" stroke-dasharray="88 440" stroke-dashoffset="-180" transform="rotate(-90 80 80)"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#F59E0B" stroke-width="20" stroke-dasharray="66 440" stroke-dashoffset="-268" transform="rotate(-90 80 80)"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#7C3AED" stroke-width="20" stroke-dasharray="44 440" stroke-dashoffset="-334" transform="rotate(-90 80 80)"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#DC2626" stroke-width="20" stroke-dasharray="62 440" stroke-dashoffset="-378" transform="rotate(-90 80 80)"/>
+                <text x="80" y="72" text-anchor="middle" style="font-size:20px;font-weight:700;fill:#1D1D1F">86</text>
+                <text x="80" y="92" text-anchor="middle" style="font-size:11px;fill:#AEAEB2">在职总数</text>
+              </svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:var(--brand)"></div>工程管理部 42人 (49%)</div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:var(--green)"></div>市场营销部 12人 (14%)</div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:var(--orange)"></div>质量安全部 8人 (9%)</div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:var(--purple)"></div>综合行政部 7人 (8%)</div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:var(--red)"></div>其他部门 17人 (20%)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Turnover Trend -->
+      <div class="card" style="flex:1">
+        <div class="card-header"><div class="card-header-title">流动率趋势（近6月）</div><button class="btn btn-sm btn-outline">下钻</button></div>
+        <div class="card-body">
+          <div style="padding:16px">
+            <svg viewBox="0 0 340 130" width="340" height="130">
+              <!-- Grid lines -->
+              <line x1="40" y1="20" x2="320" y2="20" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="50" x2="320" y2="50" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="80" x2="320" y2="80" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="110" x2="320" y2="110" stroke="#E5E5EA" stroke-width="1"/>
+              <!-- Labels -->
+              <text x="40" y="15" style="font-size:9px;fill:#AEAEB2">5%</text>
+              <text x="40" y="45" style="font-size:9px;fill:#AEAEB2">3%</text>
+              <text x="40" y="75" style="font-size:9px;fill:#AEAEB2">1%</text>
+              <text x="40" y="105" style="font-size:9px;fill:#AEAEB2">0%</text>
+              <!-- X axis labels -->
+              <text x="80" y="125" style="font-size:9px;fill:#AEAEB2">2月</text>
+              <text x="130" y="125" style="font-size:9px;fill:#AEAEB2">3月</text>
+              <text x="180" y="125" style="font-size:9px;fill:#AEAEB2">4月</text>
+              <text x="230" y="125" style="font-size:9px;fill:#AEAEB2">5月</text>
+              <text x="280" y="125" style="font-size:9px;fill:#AEAEB2">6月</text>
+              <text x="320" y="125" style="font-size:9px;fill:#AEAEB2">7月</text>
+              <!-- Entry line (green) -->
+              <polyline points="80,45 130,30 180,60 230,45 280,55 320,50" fill="none" stroke="#059669" stroke-width="2"/>
+              <circle cx="80" cy="45" r="4" fill="#059669"/><circle cx="130" cy="30" r="4" fill="#059669"/>
+              <circle cx="180" cy="60" r="4" fill="#059669"/><circle cx="230" cy="45" r="4" fill="#059669"/>
+              <circle cx="280" cy="55" r="4" fill="#059669"/><circle cx="320" cy="50" r="4" fill="#059669"/>
+              <!-- Exit line (red) -->
+              <polyline points="80,95 130,100 180,90 230,105 280,100 320,100" fill="none" stroke="#DC2626" stroke-width="2"/>
+              <circle cx="80" cy="95" r="4" fill="#DC2626"/><circle cx="130" cy="100" r="4" fill="#DC2626"/>
+              <circle cx="180" cy="90" r="4" fill="#DC2626"/><circle cx="230" cy="105" r="4" fill="#DC2626"/>
+              <circle cx="280" cy="100" r="4" fill="#DC2626"/><circle cx="320" cy="100" r="4" fill="#DC2626"/>
+              <!-- Legend -->
+              <circle cx="180" cy="5" r="4" fill="#059669"/><text x="188" y="8" style="font-size:9px;fill:#86868B">入职率</text>
+              <circle cx="240" cy="5" r="4" fill="#DC2626"/><text x="248" y="8" style="font-size:9px;fill:#86868B">离职率</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salary Structure Bar -->
+    <div style="display:flex;gap:20px">
+      <div class="card" style="flex:1">
+        <div class="card-header"><div class="card-header-title">薪资结构分析</div><button class="btn btn-sm btn-outline">导出</button></div>
+        <div class="card-body">
+          <div style="padding:16px">
+            <svg viewBox="0 0 340 130" width="340" height="130">
+              <line x1="40" y1="20" x2="320" y2="20" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="50" x2="320" y2="50" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="80" x2="320" y2="80" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="110" x2="320" y2="110" stroke="#E5E5EA" stroke-width="1"/>
+              <text x="5" y="15" style="font-size:9px;fill:#AEAEB2">¥32K</text>
+              <text x="5" y="45" style="font-size:9px;fill:#AEAEB2">¥24K</text>
+              <text x="5" y="75" style="font-size:9px;fill:#AEAEB2">¥16K</text>
+              <text x="5" y="105" style="font-size:9px;fill:#AEAEB2">¥8K</text>
+              <!-- Bars -->
+              <rect x="60" y="25" width="40" height="85" rx="6" fill="#2563EB"/>
+              <text x="80" y="115" style="font-size:9px;fill:#AEAEB2;text-anchor:middle">P6</text>
+              <rect x="110" y="45" width="40" height="65" rx="6" fill="#7C3AED"/>
+              <text x="130" y="115" style="font-size:9px;fill:#AEAEB2;text-anchor:middle">P5</text>
+              <rect x="160" y="55" width="40" height="55" rx="6" fill="#059669"/>
+              <text x="180" y="115" style="font-size:9px;fill:#AEAEB2;text-anchor:middle">P4</text>
+              <rect x="210" y="70" width="40" height="40" rx="6" fill="#F59E0B"/>
+              <text x="230" y="115" style="font-size:9px;fill:#AEAEB2;text-anchor:middle">P3</text>
+              <rect x="260" y="80" width="40" height="30" rx="6" fill="#DC2626"/>
+              <text x="280" y="115" style="font-size:9px;fill:#AEAEB2;text-anchor:middle">P2</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost Dashboard -->
+      <div class="card" style="flex:1">
+        <div class="card-header"><div class="card-header-title">人力成本预警</div></div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">🚨</div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--red)">超编人力成本溢出</div><div style="font-size:12px;color:var(--text2)">工程管理部超编2人，额外成本 ¥36,000/月</div></div>
+            </div>
+            <div style="background:var(--orange-light);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">⚠️</div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--orange)">社保基数变更待确认</div><div style="font-size:12px;color:var(--text2)">3人社保基数调整，影响7月工资计算</div></div>
+            </div>
+            <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">✅</div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--green)">人均成本可控</div><div style="font-size:12px;color:var(--text2)">月度人均成本 ¥17,930，低于预算阈值 ¥20,000</div></div>
+            </div>
+            <div style="background:var(--brand-light);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">📊</div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--brand)">成本趋势：事前预警</div><div style="font-size:12px;color:var(--text2)">打破传统事后统计盲区，数据驱动事前预警决策</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

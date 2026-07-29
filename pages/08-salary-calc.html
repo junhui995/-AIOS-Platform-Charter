@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 工资计算</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.search-pill{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--text2)}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-primary:hover{background:#1D4ED8}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+/* Salary breakdown bar */
+.salary-bar{display:flex;gap:2px;height:20px;border-radius:99px;overflow:hidden;width:200px}
+.salary-bar .seg{display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:600}
+/* Flow card */
+.flow-step{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);transition:all .2s;cursor:pointer}
+.flow-step:hover{transform:scale(1.02);box-shadow:var(--shadow)}
+.flow-step .icon-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:white}
+.flow-step .info{flex:1}.flow-step .info .name{font-size:13px;font-weight:600}.flow-step .info .desc{font-size:11px;color:var(--text3)}
+.flow-step .arrow{color:var(--text3);font-size:16px}
+.money{font-weight:700;color:var(--text)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div><div class="nav-item"><span class="icon">👤</span>人员中心</div><div class="nav-item"><span class="icon">📌</span>岗位管理</div><div class="nav-item"><span class="icon">📅</span>考勤管理</div><div class="nav-item"><span class="icon">🏆</span>绩效管理</div>
+    <div class="nav-item active"><span class="icon">💰</span>工资计算</div><div class="nav-item"><span class="icon">🧾</span>工资条</div><div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div><div class="nav-item"><span class="icon">📑</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div><div class="nav-item"><span class="icon">💳</span>收付款</div><div class="nav-item"><span class="icon">🧾</span>发票中心</div></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">工资计算</div><div class="topbar-subtitle">任务化薪酬 · 自动算薪 · 规则引擎驱动</div></div><div class="topbar-right"><div class="search-pill">🔍 搜索员工/薪资方案</div><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">✅</div><div><div class="val">86</div><div class="label">参与算薪人数</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">💰</div><div><div class="val">¥1.54M</div><div class="label">本月应发总额</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⏳</div><div><div class="val">¥0.42M</div><div class="label">本月扣减总额</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--purple)">📊</div><div><div class="val">¥1.12M</div><div class="label">本月实发总额</div></div></div>
+    </div>
+
+    <!-- Salary Flow -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">2026年7月 算薪流程</div><button class="btn btn-sm btn-primary">发起本月算薪</button></div>
+      <div class="card-body">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="flow-step"><div class="icon-circle" style="background:var(--green)">✅</div><div class="info"><div class="name">考勤汇总</div><div class="desc">已完成 · 出勤数据导入</div></div></div>
+          <div class="flow-step"><div class="icon-circle" style="background:var(--green)">✅</div><div class="info"><div class="name">绩效系数</div><div class="desc">已联动 · 68人绩效系数写入</div></div></div>
+          <div class="flow-step"><div class="icon-circle" style="background:var(--orange)">⏳</div><div class="info"><div class="name">社保公积金</div><div class="desc">待确认 · 3人基数变更</div></div></div>
+          <div class="flow-step"><div class="icon-circle" style="background:var(--text3)">⬜</div><div class="info"><div class="name">个税计算</div><div class="desc">未开始 · 依赖前序完成</div></div></div>
+          <div class="flow-step"><div class="icon-circle" style="background:var(--text3)">⬜</div><div class="info"><div class="name">实发汇总</div><div class="desc">未开始 · 最终出表</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salary Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header"><div class="card-header-title">薪资明细表 <span class="count">2026年7月</span></div>
+        <div class="toolbar"><div class="pill-tabs" style="margin-bottom:0"><div class="pill-tab active">全部</div><div class="pill-tab">已完成</div><div class="pill-tab">待确认</div><div class="pill-tab">异常</div></div><button class="btn btn-sm btn-outline">导出工资条</button></div></div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>员工编号</th><th>姓名</th><th>部门</th><th>基本工资</th><th>绩效工资</th><th>补贴</th><th>应发合计</th><th>社保</th><th>公积金</th><th>个税</th><th>考勤扣减</th><th>实发合计</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>EMP-001</td><td style="font-weight:600">陈建国</td><td>工程管理部</td>
+                <td class="money">¥18,000</td><td class="money">¥3,600</td><td class="money">¥1,500</td><td class="money" style="color:var(--brand)">¥23,100</td>
+                <td style="color:var(--red)">¥-1,980</td><td style="color:var(--red)">¥-2,160</td><td style="color:var(--red)">¥-1,260</td><td style="color:var(--red)">¥-0</td>
+                <td class="money" style="color:var(--green);font-size:14px">¥17,700</td>
+                <td><span class="status-pill status-active">已完成</span></td><td><button class="btn btn-sm btn-outline">详情</button></td>
+              </tr>
+              <tr>
+                <td>EMP-002</td><td style="font-weight:600">王亚</td><td>综合行政部</td>
+                <td class="money">¥15,000</td><td class="money">¥1,500</td><td class="money">¥800</td><td class="money" style="color:var(--brand)">¥17,300</td>
+                <td style="color:var(--red)">¥-1,650</td><td style="color:var(--red)">¥-1,800</td><td style="color:var(--red)">¥-820</td><td style="color:var(--red)">¥-0</td>
+                <td class="money" style="color:var(--green);font-size:14px">¥13,030</td>
+                <td><span class="status-pill status-active">已完成</span></td><td><button class="btn btn-sm btn-outline">详情</button></td>
+              </tr>
+              <tr>
+                <td>EMP-003</td><td style="font-weight:600">张明</td><td>市场营销部</td>
+                <td class="money">¥14,000</td><td style="color:var(--orange)">待定</td><td class="money">¥600</td><td class="money" style="color:var(--orange)">待确认</td>
+                <td style="color:var(--red)">¥-1,540</td><td style="color:var(--red)">¥-1,680</td><td style="color:var(--orange)">待定</td><td style="color:var(--red)">¥-0</td>
+                <td style="color:var(--orange);font-weight:700">待确认</td>
+                <td><span class="status-pill status-pending">待绩效确认</span></td><td><button class="btn btn-sm btn-primary">确认</button></td>
+              </tr>
+              <tr>
+                <td>EMP-004</td><td style="font-weight:600">李华</td><td>质量安全部</td>
+                <td class="money">¥12,000</td><td class="money">¥0</td><td class="money">¥400</td><td class="money" style="color:var(--brand)">¥12,400</td>
+                <td style="color:var(--red)">¥-1,320</td><td style="color:var(--red)">¥-1,440</td><td style="color:var(--red)">¥-420</td><td style="color:var(--red)">¥-0</td>
+                <td class="money" style="color:var(--green);font-size:14px">¥9,220</td>
+                <td><span class="status-pill status-active">已完成</span></td><td><button class="btn btn-sm btn-outline">详情</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salary Config -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">薪资方案与规则配置</div><button class="btn btn-sm btn-outline">管理薪资方案</button></div>
+      <div class="card-body">
+        <div style="display:flex;gap:16px">
+          <div style="flex:1;background:var(--green-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">📋 薪资项目配置</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">基本工资、岗位工资、职级工资<br>交通补贴、餐饮补贴、通讯补贴<br>社保公积金扣减标准<br>个税起征点及累进税率</div>
+          </div>
+          <div style="flex:1;background:var(--brand-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">⚙️ 规则公式引擎</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">打卡班次规则 → 考勤扣减公式<br>请假额度 → 假期扣减计算<br>绩效系数 × 基本工资 = 绩效工资<br>社保基数 × 比例 = 扣减金额</div>
+          </div>
+          <div style="flex:1;background:var(--purple-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--purple);margin-bottom:8px">📤 财务输出对接</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">准凭证自动制作<br>代发银行报表生成<br>个税及社保公积金申报表<br>人力成本报表与分析</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
