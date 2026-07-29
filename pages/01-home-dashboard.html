@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台2.0 - 首页工作台</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --primary: #0F172A;
+  --primary-blue: #2563EB;
+  --on-primary: #FFFFFF;
+  --secondary: #334155;
+  --accent: #0369A1;
+  --accent-green: #059669;
+  --background: #F8FAFC;
+  --foreground: #020617;
+  --card-bg: #FFFFFF;
+  --muted: #E8ECF1;
+  --muted-text: #64748B;
+  --border: #E2E8F0;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(15,23,42,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 16px;
+}
+
+.sidebar-brand-icon {
+  width: 36px; height: 36px;
+  background: var(--primary-blue);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+
+.sidebar-brand-text {
+  font-size: 15px; font-weight: 500;
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.08); color: var(--on-primary); }
+
+.nav-item.active {
+  background: rgba(37,99,235,0.2);
+  color: var(--on-primary);
+  font-weight: 500;
+}
+
+.nav-icon {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+
+.nav-item.active .nav-icon { background: var(--primary-blue); }
+
+.nav-section-title {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  padding: 12px 12px 4px;
+  letter-spacing: 0.5px;
+}
+
+.nav-badge {
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.top-bar {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-bar-left { display: flex; align-items: center; gap: 16px; }
+
+.top-bar-title { font-size: 15px; font-weight: 500; }
+
+.module-tabs {
+  display: flex; gap: 2px;
+  background: var(--muted);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.module-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted-text);
+  cursor: pointer;
+}
+
+.module-tab.active {
+  background: var(--card-bg);
+  color: var(--primary-blue);
+  font-weight: 500;
+}
+
+.user-area {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.user-avatar {
+  width: 32px; height: 32px;
+  background: var(--primary-blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 12px; font-weight: 500;
+}
+
+.user-name { font-size: 13px; color: var(--secondary); }
+
+.content-area {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted-text);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-change {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.stat-change.up { color: var(--accent-green); }
+.stat-change.down { color: var(--danger); }
+
+.stat-icon {
+  position: absolute;
+  top: 16px; right: 20px;
+  width: 40px; height: 40px;
+  background: var(--muted);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 280px;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.panel-action {
+  font-size: 12px;
+  color: var(--primary-blue);
+  cursor: pointer;
+}
+
+.panel-body { padding: 12px 16px; }
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.todo-item:last-child { border-bottom: none; }
+
+.todo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.todo-dot.urgent { background: var(--danger); }
+.todo-dot.normal { background: var(--primary-blue); }
+.todo-dot.info { background: var(--accent); }
+
+.todo-text { font-size: 13px; }
+
+.todo-meta { font-size: 11px; color: var(--muted-text); }
+
+.announcement-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.announcement-item:last-child { border-bottom: none; }
+
+.announcement-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--primary-blue);
+  color: white;
+  margin-right: 6px;
+}
+
+.announcement-text { font-size: 13px; }
+
+.announcement-date { font-size: 11px; color: var(--muted-text); }
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.alert-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.alert-icon.danger { background: var(--danger-light); color: var(--danger); }
+.alert-icon.warning { background: var(--warning-light); color: var(--warning); }
+
+.alert-title { font-size: 13px; font-weight: 500; }
+
+.alert-desc { font-size: 12px; color: var(--muted-text); }
+
+.process-list {
+  display: flex; gap: 4px;
+  margin-bottom: 16px;
+}
+
+.process-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted-text);
+  cursor: pointer;
+}
+
+.process-tab.active {
+  background: var(--primary-blue);
+  color: white;
+  font-weight: 500;
+}
+
+.process-badge {
+  background: rgba(37,99,235,0.15);
+  color: var(--primary-blue);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-text);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.status-badge.pending { background: #DBEAFE; color: #1D4ED8; }
+.status-badge.done { background: #D1FAE5; color: #047857; }
+.status-badge.review { background: #FEF3C7; color: #92400E; }
+
+.slogan-bar {
+  background: var(--primary);
+  color: rgba(255,255,255,0.6);
+  padding: 8px 16px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">HF</div>
+      <div class="sidebar-brand-text">华复保利工作台</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item active">
+        <div class="nav-icon">&#9632;</div>
+        首页工作台
+        <span class="nav-badge">3</span>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        组织中心
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        人员中心
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        岗位管理
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        考勤管理
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        绩效管理
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        工资计算
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        工资条
+      </div>
+
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        合同首页
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        合同台账
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        收付款管理
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        发票中心
+      </div>
+
+      <div class="nav-section-title">其他</div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        培训管理
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9632;</div>
+        数据报表
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="slogan-bar">
+      <span>2026 骏马奋蹄 向巅峰</span>
+      <span>华复保利企业工作台 · 携手共创未来</span>
+    </div>
+
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="module-tabs">
+          <div class="module-tab active">CRM</div>
+          <div class="module-tab">OA</div>
+          <div class="module-tab active" style="background:var(--primary-blue);color:white;">人力</div>
+          <div class="module-tab">招投标</div>
+          <div class="module-tab">财务</div>
+          <div class="module-tab">采购</div>
+        </div>
+      </div>
+      <div class="user-area">
+        <div class="user-avatar">王</div>
+        <div class="user-name">王亚 (行政主管)</div>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">在职人数</div>
+          <div class="stat-value">128</div>
+          <div class="stat-change up">本月 +3 入职</div>
+          <div class="stat-icon">&#9650;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">本月入职 / 离职</div>
+          <div class="stat-value">3 / 1</div>
+          <div class="stat-change">净增 2 人</div>
+          <div class="stat-icon">&#8644;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">待我审批</div>
+          <div class="stat-value">5</div>
+          <div class="stat-change down">较昨日 +2</div>
+          <div class="stat-icon">&#9998;</div>
+        </div>
+        <div class="stat-card" style="border-color:var(--danger);">
+          <div class="stat-label">合同到期预警</div>
+          <div class="stat-value" style="color:var(--danger);">2</div>
+          <div class="stat-change down">30天内到期</div>
+          <div class="stat-icon" style="background:var(--danger-light);">&#9888;</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">待办 / 申请</div>
+            <div class="panel-action">更多 &gt;</div>
+          </div>
+          <div class="panel-body">
+            <div class="process-list">
+              <div class="process-tab active">待处理 <span class="process-badge">5</span></div>
+              <div class="process-tab">抄送 <span class="process-badge">0</span></div>
+              <div class="process-tab">我发起 <span class="process-badge">2</span></div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>序号</th><th>流程名称</th><th>当前节点</th><th>状态</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>DF-20260719 张三 - 试用期转正申请</td>
+                  <td>行政审批</td>
+                  <td><span class="status-badge pending">审批中</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>DF-20260718 李四 - 岗位薪级调整表</td>
+                  <td>财务总监</td>
+                  <td><span class="status-badge done">已执行</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>LV-202603 王五 - 婚假申请 (3天)</td>
+                  <td>部门主管</td>
+                  <td><span class="status-badge review">审批中</span></td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>KA-20260720 赵六 - 加班申请</td>
+                  <td>行政审批</td>
+                  <td><span class="status-badge pending">审批中</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">公告</div>
+            <div class="panel-action">全部公告 &gt;</div>
+          </div>
+          <div class="panel-body">
+            <div class="announcement-item">
+              <span class="announcement-tag">重要</span>
+              <span class="announcement-text">2026年Q3绩效考核方案已发布，请各部门按时完成评估</span>
+              <br><span class="announcement-date">2026-07-22 · 人事部</span>
+            </div>
+            <div class="announcement-item">
+              <span class="announcement-tag" style="background:var(--accent);">通知</span>
+              <span class="announcement-text">8月考勤方案调整通知：统一打卡时间变更</span>
+              <br><span class="announcement-date">2026-07-20 · 行政部</span>
+            </div>
+            <div class="announcement-item">
+              <span class="announcement-tag" style="background:var(--accent-green);">制度</span>
+              <span class="announcement-text">新版员工手册修订版已上线，请查阅</span>
+              <br><span class="announcement-date">2026-07-18 · 人事部</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="border-color:var(--warning);">
+          <div class="panel-header" style="background:var(--warning-light);">
+            <div class="panel-title" style="color:var(--warning);">风险预警</div>
+            <div class="panel-action">预警中心 &gt;</div>
+          </div>
+          <div class="panel-body">
+            <div class="alert-item">
+              <div class="alert-icon danger">&#9888;</div>
+              <div>
+                <div class="alert-title">试用期转正提醒</div>
+                <div class="alert-desc">张三试用期将于7月25日到期，请及时处理转正</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon danger">&#9888;</div>
+              <div>
+                <div class="alert-title">劳动合同到期</div>
+                <div class="alert-desc">王五劳动合同将于8月15日到期，需续签</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon warning">&#9888;</div>
+              <div>
+                <div class="alert-title">考勤异常预警</div>
+                <div class="alert-desc">赵六连续3天缺卡，请核实</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon warning">&#9888;</div>
+              <div>
+                <div class="alert-title">逾期应收提醒</div>
+                <div class="alert-desc">合同 HT-2026-0501 逾期应收 ¥580,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
