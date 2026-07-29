@@ -1,7 +1,20 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { Search, Plus } from 'lucide-react';
 
 export default function EmployeePage() {
+  const [employees, setEmployees] = useState<{id: string, name: string, code: string, department: {name: string}, hireDate: string, status: string}[]>([]);
+
+  useEffect(() => {
+    fetch('/api/employee')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setEmployees(data);
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex justify-between items-center mb-6">
@@ -30,35 +43,34 @@ export default function EmployeePage() {
             <tr>
               <th className="p-4 font-medium">员工姓名</th>
               <th className="p-4 font-medium">工号</th>
-              <th className="p-4 font-medium">部门 / 岗位</th>
+              <th className="p-4 font-medium">部门</th>
               <th className="p-4 font-medium">入职日期</th>
               <th className="p-4 font-medium">状态</th>
               <th className="p-4 font-medium">操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-[#E5E5EA]">
-              <td className="p-4 font-medium flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">张</div>
-                张三
-              </td>
-              <td className="p-4">EMP-001</td>
-              <td className="p-4">产品部 / 高级产品经理</td>
-              <td className="p-4">2023-05-12</td>
-              <td className="p-4"><span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs">试用期</span></td>
-              <td className="p-4 text-blue-600 hover:underline cursor-pointer">查看档案</td>
-            </tr>
-            <tr className="border-b border-[#E5E5EA]">
-              <td className="p-4 font-medium flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">李</div>
-                李四
-              </td>
-              <td className="p-4">EMP-002</td>
-              <td className="p-4">研发部 / 前端工程师</td>
-              <td className="p-4">2021-08-01</td>
-              <td className="p-4"><span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs">正式</span></td>
-              <td className="p-4 text-blue-600 hover:underline cursor-pointer">查看档案</td>
-            </tr>
+            {employees.length > 0 ? employees.map((emp: {id: string, name: string, code: string, department: {name: string}, hireDate: string, status: string}, idx: number) => (
+              <tr key={emp.id} className={idx !== employees.length - 1 ? "border-b border-[#E5E5EA]" : ""}>
+                <td className="p-4 font-medium flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                    {emp.name.charAt(0)}
+                  </div>
+                  {emp.name}
+                </td>
+                <td className="p-4 text-[#8E8E93]">{emp.code}</td>
+                <td className="p-4">{emp.department?.name || '-'}</td>
+                <td className="p-4">{new Date(emp.hireDate).toLocaleDateString()}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded-md text-xs font-medium ${emp.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {emp.status}
+                  </span>
+                </td>
+                <td className="p-4 text-blue-600 hover:underline cursor-pointer">查看档案</td>
+              </tr>
+            )) : (
+              <tr><td colSpan={6} className="p-8 text-center text-[#8E8E93]">加载中或暂无数据...</td></tr>
+            )}
           </tbody>
         </table>
       </div>
