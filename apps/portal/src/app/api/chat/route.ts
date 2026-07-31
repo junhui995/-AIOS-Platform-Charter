@@ -19,6 +19,8 @@ export async function POST(req: Request) {
 
             // TODO: In Phase 3 we will integrate RuntimeEngine properly.
             // For now, this is a mock implementation requested by the user to quickly verify the end-to-end flow of the new schema.
+            // DO NOT directly access the database using prisma here in production!
+            // It violates the architectural principle that AI must execute actions exclusively through Tools.
             if (prompt.includes("请假") || prompt.includes("假") || prompt.includes("休息")) {
                 enqueue("🔍 识别到业务域：【考勤与请假】\n正在查找员工张三 (EMP-001) 的假期额度...\n");
                 await new Promise(r => setTimeout(r, 800));

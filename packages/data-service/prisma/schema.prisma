@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,128 +8,305 @@ datasource db {
 }
 
 // -----------------------------------------------------------------
-// HR Domain
+// System Management & Permissions Domain
 // -----------------------------------------------------------------
 
-model Employee {
-  id             String    @id @default(uuid())
-  code           String    @unique // e.g. EMP-001
-  name           String
-  phoneNumber    String    @unique
-  email          String    @unique
-  departmentId   String?
-  positionId     String?
-  hireDate       DateTime
-  status         String    @default("ACTIVE") // ACTIVE, PROBATION, RESIGNED
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  // Permissions based on functionality and organization dimension
+  permissions RolePermission[]
+  employees   Employee[]
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  createdBy      String?
-  updatedBy      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  department     Department? @relation(fields: [departmentId], references: [id])
-  contracts      Contract[]
-  leaveRequests  LeaveRequest[]
-  leaveBalance   LeaveBalance?
-  salarySlips    SalarySlip[]
+model RolePermission {
+  id          String  @id @default(uuid())
+  roleId      String
+  module      String // e.g., HR, FINANCE, WORKFLOW
+  action      String // READ, WRITE, ADMIN
+  dimensionId String? // Links to OrgDimension for data scope limitation
+
+  role      Role          @relation(fields: [roleId], references: [id])
+  dimension OrgDimension? @relation(fields: [dimensionId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Organization Architecture Domain
+// -----------------------------------------------------------------
+
+model OrgDimension {
+  id          String  @id @default(uuid())
+  code        String  @unique // COMPANY_DIMENSION, BUSINESS_DIMENSION
+  name        String
+  description String?
+
+  departments Department[]
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Department {
-  id             String    @id @default(uuid())
-  code           String    @unique
+  id             String  @id @default(uuid())
+  dimensionId    String
+  code           String  @unique
   name           String
   parentId       String?
-  headcountLimit Int       @default(0)
+  headcountLimit Int     @default(0)
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  employees      Employee[]
-  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children       Department[] @relation("DepartmentHierarchy")
+  dimension OrgDimension @relation(fields: [dimensionId], references: [id])
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DepartmentHierarchy")
+  positions Position[]
+}
+
+model Position {
+  id            String   @id @default(uuid())
+  departmentId  String
+  code          String   @unique
+  name          String
+  level         String // Level for salary calculation e.g., P1, P2, M1
+  baseSalaryRef Decimal? // Reference base salary for this position level
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  department Department         @relation(fields: [departmentId], references: [id])
+  employees  EmployeePosition[]
 }
 
 // -----------------------------------------------------------------
-// Contract Domain
+// Employee Domain
 // -----------------------------------------------------------------
 
-model Contract {
-  id             String    @id @default(uuid())
-  code           String    @unique // e.g. HT-2026-001
-  counterpartyId String
-  amount         Decimal
-  signDate       DateTime
-  startDate      DateTime
-  endDate        DateTime
-  status         String    @default("DRAFT") // DRAFT, ACTIVE, EXPIRED, CANCELLED
-  ownerId        String
+model Employee {
+  id            String   @id @default(uuid())
+  code          String   @unique // e.g. EMP-001
+  name          String
+  phoneNumber   String   @unique
+  email         String   @unique
+  personalLevel String? // Personal level evaluating skill/tenure e.g., L3
+  roleId        String? // System Role Binding
+  hireDate      DateTime
+  status        String   @default("ACTIVE") // ACTIVE, PROBATION, RESIGNED, DISABLED
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
 
-  owner          Employee  @relation(fields: [ownerId], references: [id])
+  role            Role?               @relation(fields: [roleId], references: [id])
+  positions       EmployeePosition[]
+  contracts       LaborContract[]
+  leaveRequests   LeaveRequest[]
+  leaveBalance    LeaveBalance?
+  salarySlips     SalarySlip[]
+  reviews         PerformanceReview[]
+  PunchRecord     PunchRecord[]
+  DailyAttendance DailyAttendance[]
+}
+
+// Junction table for many-to-many relationship between Employee and Position
+model EmployeePosition {
+  id         String   @id @default(uuid())
+  employeeId String
+  positionId String
+  isPrimary  Boolean  @default(true)
+  assignedAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  position Position @relation(fields: [positionId], references: [id])
+
+  @@unique([employeeId, positionId])
 }
 
 // -----------------------------------------------------------------
-// New EHR Domains: Time & Attendance, Recruitment, Compensation
+// Labor Contract Domain
 // -----------------------------------------------------------------
 
-model LeaveRequest {
-  id             String    @id @default(uuid())
-  employeeId     String
-  leaveType      String    // ANNUAL, SICK, UNPAID, MATERNITY
-  startDate      DateTime
-  endDate        DateTime
-  reason         String?
-  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
-  aiAnalysis     String?   // Store AI reasoning for approval/rejection recommendations
+model LaborContractTemplate {
+  id            String  @id @default(uuid())
+  name          String  @unique
+  contentHtml   String // Template content
+  watermarkText String?
+  isActive      Boolean @default(true)
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  employee       Employee  @relation(fields: [employeeId], references: [id])
+  contracts LaborContract[]
 }
 
-model LeaveBalance {
-  id             String    @id @default(uuid())
-  employeeId     String    @unique
-  annualTotal    Int       @default(0) // In days or hours
-  annualUsed     Int       @default(0)
-  sickTotal      Int       @default(0)
-  sickUsed       Int       @default(0)
+model LaborContract {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  employeeId String
+  templateId String?
+  signDate   DateTime
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("ACTIVE") // DRAFT, ACTIVE, EXPIRED, TERMINATED
 
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  employee       Employee  @relation(fields: [employeeId], references: [id])
+  employee Employee               @relation(fields: [employeeId], references: [id])
+  template LaborContractTemplate? @relation(fields: [templateId], references: [id])
 }
 
-model Candidate {
-  id             String    @id @default(uuid())
-  name           String
-  email          String    @unique
-  phoneNumber    String?
-  resumeUrl      String?   // S3 or blob storage link
-  appliedRole    String?
-  status         String    @default("NEW") // NEW, SCREENING, INTERVIEWING, OFFERED, REJECTED
-  aiParsedSkills String[]  // Extracted by AI
-  aiSummary      String?   // Extracted by AI
+// -----------------------------------------------------------------
+// Performance Management Domain
+// -----------------------------------------------------------------
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+model PerformanceTemplate {
+  id         String @id @default(uuid())
+  name       String
+  targetType String // COMPANY, DEPARTMENT, EMPLOYEE
+  metrics    Json // Configurable metrics and weights
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviews PerformanceReview[]
+}
+
+model PerformanceReview {
+  id         String   @id @default(uuid())
+  employeeId String
+  templateId String
+  period     String // e.g., 2026-Q3
+  score      Decimal?
+  grade      String? // S, A, B, C
+  status     String   @default("DRAFT") // DRAFT, IN_PROGRESS, COMPLETED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee            @relation(fields: [employeeId], references: [id])
+  template PerformanceTemplate @relation(fields: [templateId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Compensation & Salary Domain
+// -----------------------------------------------------------------
+
+model SalaryFormula {
+  id          String  @id @default(uuid())
+  targetType  String // COMPANY, DEPARTMENT, POSITION, EMPLOYEE
+  targetId    String? // ID of specific dept/employee if applicable
+  expression  String // e.g., "baseSalary + (performanceScore * 100) - deductions"
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SalarySlip {
-  id             String    @id @default(uuid())
-  employeeId     String
-  month          String    // e.g., "2026-07"
-  baseSalary     Decimal
-  bonus          Decimal   @default(0)
-  deductions     Decimal   @default(0)
-  netPay         Decimal
-  status         String    @default("DRAFT") // DRAFT, ISSUED
+  id         String  @id @default(uuid())
+  employeeId String
+  month      String // e.g., "2026-07"
+  baseSalary Decimal
+  bonus      Decimal @default(0)
+  deductions Decimal @default(0)
+  netPay     Decimal
+  status     String  @default("DRAFT") // DRAFT, ISSUED
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  employee       Employee  @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Time & Attendance Domain
+// -----------------------------------------------------------------
+
+model LeaveRequest {
+  id         String   @id @default(uuid())
+  employeeId String
+  leaveType  String // ANNUAL, SICK, UNPAID, MATERNITY
+  startDate  DateTime
+  endDate    DateTime
+  reason     String?
+  status     String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  aiAnalysis String? // Store AI reasoning for approval/rejection recommendations
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model LeaveBalance {
+  id          String @id @default(uuid())
+  employeeId  String @unique
+  annualTotal Int    @default(0) // In days or hours
+  annualUsed  Int    @default(0)
+  sickTotal   Int    @default(0)
+  sickUsed    Int    @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Advanced Time & Attendance Domain (Schedules & Punch)
+// -----------------------------------------------------------------
+
+model SchedulePlan {
+  id            String @id @default(uuid())
+  name          String @unique // e.g. "Standard 9-to-6", "Night Shift"
+  workTimeStart String // e.g. "09:00"
+  workTimeEnd   String // e.g. "18:00"
+  lateTolerance Int    @default(0) // minutes allowed to be late without penalty
+  workDays      Int[] // e.g. [1,2,3,4,5] for Mon-Fri
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailyRecords DailyAttendance[]
+}
+
+model PunchRecord {
+  id         String   @id @default(uuid())
+  employeeId String
+  punchTime  DateTime
+  punchType  String // IN, OUT
+  source     String // WECHAT, GPS, WIFI
+  deviceId   String?
+  location   String?
+
+  createdAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model DailyAttendance {
+  id         String   @id @default(uuid())
+  employeeId String
+  date       DateTime @db.Date
+  scheduleId String?
+
+  punchInTime  DateTime?
+  punchOutTime DateTime?
+
+  status        String  @default("NORMAL") // NORMAL, LATE, EARLY_LEAVE, ABSENT, MISSED_PUNCH
+  exceptionMemo String? // AI or system memo for the exception
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee      @relation(fields: [employeeId], references: [id])
+  schedule SchedulePlan? @relation(fields: [scheduleId], references: [id])
+
+  @@unique([employeeId, date])
 }
