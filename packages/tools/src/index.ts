@@ -1,36 +1,16 @@
-import { prisma, db as mockDb } from '@aios/data-service';
+import { prisma } from '@aios/data-service';
 
 export interface ToolDefinition {
     name: string;
     description: string;
     schema: Record<string, any>;
-    execute: (args: any) => Promise<any> | any;
+    execute: (args: any) => Promise<any>;
 }
 
-export const Tools: Record<string, ToolDefinition> = {
-    // --- Legacy Expense Mock Tools ---
-    createExpenseOrder: {
-        name: 'createExpenseOrder',
-        description: 'Creates a new expense record in the system. Returns the new expense ID.',
-        schema: {
-            type: 'object',
-            properties: {
-                employeeId: { type: 'string', description: 'The ID of the employee (e.g. E001)' },
-                amount: { type: 'number', description: 'The amount to expense' },
-                reason: { type: 'string', description: 'The reason for the expense' }
-            },
-            required: ['employeeId', 'amount', 'reason']
-        },
-        execute: async (args: { employeeId: string; amount: number; reason: string }) => {
-            const exp = mockDb.createExpense(args.employeeId, args.amount, args.reason);
-            return { success: true, expenseId: exp.id, status: exp.status };
-        }
-    },
-
-    // --- EHR Active Tools (Connected to Real Prisma DB) ---
+export const tools: Record<string, ToolDefinition> = {
     getEmployeeIdByName: {
         name: 'getEmployeeIdByName',
-        description: 'Looks up an employee ID given their name. Useful before checking their leave balances or payroll.',
+        description: 'Looks up an employee by their full name and returns their ID and Department.',
         schema: {
             type: 'object',
             properties: {
@@ -41,10 +21,23 @@ export const Tools: Record<string, ToolDefinition> = {
         execute: async (args: { name: string }) => {
             const emp = await prisma.employee.findFirst({
                 where: { name: args.name },
-                include: { department: true }
+                include: {
+                  positions: {
+                    include: {
+                      position: {
+                        include: {
+                          department: true
+                        }
+                      }
+                    }
+                  }
+                }
             });
             if (emp) {
-                return { id: emp.id, code: emp.code, department: emp.department?.name || 'Unknown' };
+                // Find primary position's department name, if any
+                const primaryPos = emp.positions.find(p => p.isPrimary);
+                const deptName = primaryPos?.position?.department?.name || 'Unknown';
+                return { id: emp.id, code: emp.code, department: deptName };
             }
             return { error: `Employee ${args.name} not found.` };
         }
@@ -56,7 +49,7 @@ export const Tools: Record<string, ToolDefinition> = {
         schema: {
             type: 'object',
             properties: {
-                employeeId: { type: 'string', description: 'The Prisma ID of the employee.' }
+                employeeId: { type: 'string', description: 'The unique ID of the employee' }
             },
             required: ['employeeId']
         },
@@ -64,31 +57,33 @@ export const Tools: Record<string, ToolDefinition> = {
             const balance = await prisma.leaveBalance.findUnique({
                 where: { employeeId: args.employeeId }
             });
-            if (!balance) return { error: `Leave balance not initialized for employee ${args.employeeId}` };
-
-            return {
-                annualRemaining: balance.annualTotal - balance.annualUsed,
-                sickRemaining: balance.sickTotal - balance.sickUsed
-            };
+            if (balance) {
+                return {
+                    annualRemaining: balance.annualTotal - balance.annualUsed,
+                    sickRemaining: balance.sickTotal - balance.sickUsed
+                };
+            }
+            // If no balance record, assume default or 0
+            return { error: 'Leave balance not initialized for this employee.' };
         }
     },
 
     submitLeaveRequest: {
         name: 'submitLeaveRequest',
-        description: 'Submits a leave request on behalf of an employee. Calculates dates and records AI reasoning.',
+        description: 'Submits a formal leave request for an employee. Automatically creates a record in database.',
         schema: {
             type: 'object',
             properties: {
-                employeeId: { type: 'string', description: 'The Prisma ID of the employee.' },
-                leaveType: { type: 'string', description: 'ANNUAL, SICK, UNPAID, or MATERNITY' },
-                startDate: { type: 'string', description: 'ISO string of the start date' },
-                endDate: { type: 'string', description: 'ISO string of the end date' },
-                reason: { type: 'string', description: 'Reason for leave' },
-                aiReasoning: { type: 'string', description: 'The AIs justification for approving/flagging this.' }
+                employeeId: { type: 'string' },
+                leaveType: { type: 'string', enum: ['ANNUAL', 'SICK', 'UNPAID', 'MATERNITY'] },
+                startDate: { type: 'string', description: 'ISO Date string e.g. 2026-08-01' },
+                endDate: { type: 'string', description: 'ISO Date string' },
+                reason: { type: 'string' },
+                aiAnalysis: { type: 'string', description: 'AI generated justification based on rules' }
             },
             required: ['employeeId', 'leaveType', 'startDate', 'endDate']
         },
-        execute: async (args: { employeeId: string, leaveType: string, startDate: string, endDate: string, reason?: string, aiReasoning?: string }) => {
+        execute: async (args: any) => {
             const request = await prisma.leaveRequest.create({
                 data: {
                     employeeId: args.employeeId,
@@ -96,11 +91,29 @@ export const Tools: Record<string, ToolDefinition> = {
                     startDate: new Date(args.startDate),
                     endDate: new Date(args.endDate),
                     reason: args.reason,
-                    aiAnalysis: args.aiReasoning,
+                    aiAnalysis: args.aiAnalysis,
                     status: 'PENDING'
                 }
             });
             return { success: true, requestId: request.id, status: request.status };
+        }
+    },
+
+    requestFinanceApproval: {
+        name: 'requestFinanceApproval',
+        description: 'Triggers a human workflow approval in the Finance Domain.',
+        schema: {
+            type: 'object',
+            properties: {
+                targetId: { type: 'string', description: 'The entity ID (e.g. expense ID) that needs approval' },
+                contextMsg: { type: 'string', description: 'Explanation for why this was routed to finance' }
+            },
+            required: ['targetId', 'contextMsg']
+        },
+        execute: async (args: any) => {
+            // In a real system, this would call Workflow Center API
+            console.log(`[Workflow Mock] Requesting Finance Approval for ${args.targetId}: ${args.contextMsg}`);
+            return { success: true, workflowStatus: 'PENDING_FINANCE_APPROVAL' };
         }
     }
 };

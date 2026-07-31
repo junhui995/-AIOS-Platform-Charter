@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import { Tools, ToolDefinition } from '@aios/tools';
+import { tools as toolsDict, ToolDefinition } from '@aios/tools';
 import { BusinessSemanticAST, Compiler, ASTNode } from '@aios/compiler';
 
 export class RuntimeEngine {
@@ -39,7 +39,7 @@ First, find the employee ID if only the name is given. Then create the expense. 
             { role: 'user', content: userRequest }
         ];
 
-        const toolsArray: OpenAI.Chat.ChatCompletionTool[] = Object.values(Tools).map((t: unknown) => {
+        const toolsArray: OpenAI.Chat.ChatCompletionTool[] = Object.values(toolsDict).map((t: unknown) => {
             const tool = t as ToolDefinition;
             return {
                 type: 'function',
@@ -72,7 +72,7 @@ First, find the employee ID if only the name is given. Then create the expense. 
                     console.log(`\n[Agent Action] Intends to call: ${toolCall.function.name}`);
                     console.log(`[Agent Action] Arguments: ${toolCall.function.arguments}`);
 
-                    const tool = Tools[toolCall.function.name];
+                    const tool = toolsDict[toolCall.function.name];
                     if (tool) {
                         try {
                             const args = JSON.parse(toolCall.function.arguments);
@@ -109,20 +109,18 @@ First, find the employee ID if only the name is given. Then create the expense. 
     }
 
     private async mockExecution(userRequest: string): Promise<void> {
-        console.log('[Mock Agent] Analyzing intent: Create expense for Alice, amount 600.');
+        console.log('[Mock Agent] Analyzing intent: Leave request for Zhang San.');
 
-        console.log('[Mock Agent] Step 1: Getting Employee ID for "Alice"');
-        const emp = Tools.getEmployeeIdByName.execute({ name: 'Alice' });
+        console.log('[Mock Agent] Step 1: Getting Employee ID for "张三"');
+        const emp = await toolsDict.getEmployeeIdByName.execute({ name: '张三' });
         console.log(`[Tool Result] ${JSON.stringify(emp)}`);
 
-        console.log('[Mock Agent] Step 2: Creating Expense Order');
-        const exp = Tools.createExpenseOrder.execute({ employeeId: emp.id, amount: 600, reason: 'Travel' });
-        console.log(`[Tool Result] ${JSON.stringify(exp)}`);
+        if (emp.id) {
+            console.log('[Mock Agent] Step 2: Creating Leave Request');
+            const req = await toolsDict.submitLeaveRequest.execute({ employeeId: emp.id, leaveType: 'ANNUAL', startDate: '2026-08-01', endDate: '2026-08-02' });
+            console.log(`[Tool Result] ${JSON.stringify(req)}`);
 
-        console.log('[Mock Agent] Step 3: Evaluating Policy (amount > 500 => require Finance Approval)');
-        const req = Tools.requestFinanceApproval.execute({ expenseId: exp.expenseId, reason: 'Amount 600 exceeds 500 limit' });
-        console.log(`[Tool Result] ${JSON.stringify(req)}`);
-
-        console.log(`\n[Agent Response] I have created expense ${exp.expenseId} for Alice for 600. Since it exceeds the 500 limit, I have requested Finance Manager approval.`);
+            console.log(`\n[Agent Response] I have created leave request ${req.requestId} for 张三.`);
+        }
     }
 }

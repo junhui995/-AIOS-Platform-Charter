@@ -5,18 +5,30 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
-  // 1. Clean existing data (optional, but good for idempotency during dev)
-  await prisma.contract.deleteMany();
+  // 1. Clean existing data
+  await prisma.laborContract.deleteMany();
+  await prisma.employeePosition.deleteMany();
   await prisma.employee.deleteMany();
+  await prisma.position.deleteMany();
   await prisma.department.deleteMany();
+  await prisma.orgDimension.deleteMany();
 
-  // 2. Create Departments
+  // 2. Create Dimensions
+  const companyDim = await prisma.orgDimension.create({
+    data: {
+      code: 'COMPANY',
+      name: '公司行政架构'
+    }
+  });
+
+  // 3. Create Departments
   console.log('Creating departments...');
   const hq = await prisma.department.create({
     data: {
       code: 'ORG-001',
       name: '华复保利集团 (总办)',
       headcountLimit: 5,
+      dimensionId: companyDim.id
     },
   });
 
@@ -26,6 +38,7 @@ async function main() {
       name: '人力资源部',
       parentId: hq.id,
       headcountLimit: 12,
+      dimensionId: companyDim.id
     },
   });
 
@@ -35,10 +48,40 @@ async function main() {
       name: '工程管理部',
       parentId: hq.id,
       headcountLimit: 45,
+      dimensionId: companyDim.id
     },
   });
 
-  // 3. Create Employees
+  // 4. Create Positions
+  const adminPos = await prisma.position.create({
+    data: {
+      departmentId: hq.id,
+      code: 'POS-001',
+      name: '系统管理员',
+      level: 'M3'
+    }
+  });
+
+  const hrPos = await prisma.position.create({
+    data: {
+      departmentId: hr.id,
+      code: 'POS-002',
+      name: 'HRBP',
+      level: 'P6'
+    }
+  });
+
+  const engPos = await prisma.position.create({
+    data: {
+      departmentId: engineering.id,
+      code: 'POS-003',
+      name: '高级工程师',
+      level: 'P7'
+    }
+  });
+
+
+  // 5. Create Employees
   console.log('Creating employees...');
   const admin = await prisma.employee.create({
     data: {
@@ -46,10 +89,13 @@ async function main() {
       name: '管理员',
       phoneNumber: '13800000000',
       email: 'admin@aios.local',
-      departmentId: hq.id,
-      positionId: 'POS-001',
       hireDate: new Date('2020-01-01'),
       status: 'ACTIVE',
+      positions: {
+        create: {
+          positionId: adminPos.id
+        }
+      }
     },
   });
 
@@ -59,51 +105,26 @@ async function main() {
       name: '张三',
       phoneNumber: '13812345678',
       email: 'zhangsan@aios.local',
-      departmentId: hr.id,
-      positionId: 'POS-002',
       hireDate: new Date('2023-05-12'),
       status: 'PROBATION',
+      positions: {
+        create: {
+          positionId: hrPos.id
+        }
+      }
     },
   });
 
-  const lisi = await prisma.employee.create({
-    data: {
-      code: 'EMP-002',
-      name: '李四',
-      phoneNumber: '13987654321',
-      email: 'lisi@aios.local',
-      departmentId: engineering.id,
-      positionId: 'POS-003',
-      hireDate: new Date('2021-08-01'),
-      status: 'ACTIVE',
-    },
-  });
-
-  // 4. Create Contracts
+  // 6. Create Contracts
   console.log('Creating contracts...');
-  await prisma.contract.create({
+  await prisma.laborContract.create({
     data: {
       code: 'HT-2026-001',
-      counterpartyId: 'CUST-001',
-      amount: 120000.00,
+      employeeId: admin.id,
       signDate: new Date('2026-07-01'),
       startDate: new Date('2026-07-01'),
       endDate: new Date('2027-06-30'),
       status: 'ACTIVE',
-      ownerId: admin.id,
-    },
-  });
-
-  await prisma.contract.create({
-    data: {
-      code: 'HT-2026-002',
-      counterpartyId: 'CUST-002',
-      amount: 850000.00,
-      signDate: new Date('2025-08-15'),
-      startDate: new Date('2025-09-01'),
-      endDate: new Date('2026-08-31'),
-      status: 'ACTIVE', // Mock warning state logic depends on UI/Date calculation
-      ownerId: lisi.id,
     },
   });
 
