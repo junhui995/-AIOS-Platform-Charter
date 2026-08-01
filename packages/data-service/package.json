@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run generate && tsc",
     "generate": "prisma generate",
     "test": "echo \"Error: no test specified\"",
     "seed": "ts-node src/seed.ts"
