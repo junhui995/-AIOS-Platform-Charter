@@ -310,3 +310,20 @@ model DailyAttendance {
 
   @@unique([employeeId, date])
 }
+
+// -----------------------------------------------------------------
+// Workflow & BPM Domain
+// -----------------------------------------------------------------
+
+model WorkflowDefinition {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+  nodes       Json // Stores the React Flow nodes mapping
+  edges       Json // Stores the React Flow edges connection
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
