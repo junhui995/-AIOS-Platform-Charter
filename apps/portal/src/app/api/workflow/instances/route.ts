@@ -92,7 +92,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(instance);
 
-  } catch (error: unknown) {
+  } catch (_error) {
     console.error("Failed to start process instance:", error);
     return NextResponse.json({ error: "Failed to start process instance" }, { status: 500 });
   }
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
        orderBy: { startedAt: 'desc' }
      });
      return NextResponse.json(instances);
-   } catch (error: unknown) {
+   } catch (_error) {
      return NextResponse.json({ error: "Failed to fetch instances" }, { status: 500 });
    }
 }
