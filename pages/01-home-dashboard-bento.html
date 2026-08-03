@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台 2.0 - 首页（Bento Box）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F5F5F7;
+    --surface: #FFFFFF;
+    --fg: #1D1D1F;
+    --fg-2: #6E6E73;
+    --fg-3: #AEAEB2;
+    --border: #E5E5EA;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --radius-sm: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.08);
+    --blue: #0071E3;
+    --blue-bg: #E8F1FE;
+    --green: #34C759;
+    --green-bg: #E8F8EE;
+    --orange: #FF9500;
+    --orange-bg: #FFF4E5;
+    --red: #FF3B30;
+    --red-bg: #FFEBEA;
+    --purple: #AF52DE;
+    --purple-bg: #F5EEFE;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; }
+  .logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #0071E3, #5856D6); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+  .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .nav-section { margin-bottom: 16px; }
+  .nav-section-title { font-size: 11px; font-weight: 600; color: var(--fg-3); padding: 0 20px 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 20px; font-size: 13px; color: var(--fg-2); cursor: pointer; border-radius: 8px; margin: 0 8px; }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .main { flex: 1; overflow-x: hidden; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 28px; }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .breadcrumb { font-size: 13px; color: var(--fg-3); }
+  .breadcrumb b { color: var(--fg); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .search-box { width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 7px 16px; font-size: 13px; font-family: var(--font); }
+  .search-box:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-bg); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-sm); }
+  .icon-btn:hover { box-shadow: var(--shadow-md); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #FF9500, #FF2D55); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 600; }
+  .content { padding: 8px 28px 28px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; }
+  .page-desc { font-size: 14px; color: var(--fg-2); margin-top: 2px; }
+  .btn { padding: 8px 18px; font-size: 13px; font-family: var(--font); font-weight: 500; border: none; cursor: pointer; border-radius: 980px; }
+  .btn-ghost { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
+  .btn-ghost:hover { box-shadow: var(--shadow-md); }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #0062CC; }
+  .bento-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--surface); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s ease, transform 0.2s ease); }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .card-icon-sm { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .stat-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+  .stat-unit { font-size: 14px; font-weight: 400; color: var(--fg-3); }
+  .stat-change { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .stat-change.up { color: var(--green); }
+  .stat-change.down { color: var(--red); }
+  .span-2 { grid-column: span 2; }
+  .span-full { grid-column: span 4; }
+  .todo-list { list-style: none; }
+  .todo-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--fg-3); flex-shrink: 0; cursor: pointer; }
+  .todo-check.done { background: var(--green); border-color: var(--green); display: flex; align-items: center; justify-content: center; }
+  .todo-text { font-size: 13px; flex: 1; }
+  .todo-text.done { color: var(--fg-3); text-decoration: line-through; }
+  .todo-tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+  .todo-tag.urgent { background: var(--red-bg); color: var(--red); }
+  .todo-tag.normal { background: var(--blue-bg); color: var(--blue); }
+  .notice-list { list-style: none; }
+  .notice-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .notice-item:last-child { border-bottom: none; }
+  .notice-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .notice-meta { font-size: 11px; color: var(--fg-3); display: flex; gap: 8px; }
+  .alert-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .chart-placeholder { height: 140px; display: flex; align-items: end; gap: 6px; padding-top: 12px; }
+  .bar { flex: 1; border-radius: 6px 6px 0 0; transition: height 0.3s ease; }
+  .chart-label { font-size: 10px; color: var(--fg-3); text-align: center; margin-top: 4px; }
+  .chart-row { display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">HF</div>
+      <div class="logo-text">华复保利</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">工作台</div>
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="6" height="6" rx="2"/><rect x="10" y="2" width="6" height="6" rx="2"/><rect x="2" y="10" width="6" height="6" rx="2"/><rect x="10" y="10" width="6" height="6" rx="2"/></svg>
+        <span>首页</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="6" r="2.5"/><circle cx="13" cy="6" r="2.5"/><path d="M1 16c0-3 2-5 4-5M17 16c0-3-2-5-4-5"/></svg>
+        <span>组织中心</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.5 3-6 6-6s6 2.5 6 6"/></svg>
+        <span>人员档案</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="13" rx="2"/><line x1="2" y1="7" x2="16" y2="7"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>
+        <span>考勤管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 16V7l7-4 7 4v9"/><rect x="5" y="10" width="8" height="6" rx="1"/></svg>
+        <span>绩效管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M9 5v4l3 2"/></svg>
+        <span>工资核算</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="2"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="10" y2="12"/></svg>
+        <span>合同首页</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="12" rx="2"/><line x1="2" y1="7" x2="16" y2="7"/></svg>
+        <span>合同台账</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h14M2 9h14M2 12h10"/></svg>
+        <span>收付款管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="2"/><circle cx="9" cy="9" r="2.5"/></svg>
+        <span>发票中心</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">工作台 / <b>首页</b></div>
+      </div>
+      <div class="topbar-right">
+        <input type="text" class="search-box" placeholder="搜索...">
+        <div class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1c-3.5 0-6 2.5-6 6v3.5L1.5 12h15L15 10.5V7c0-3.5-2.5-6-6-6z"/><path d="M7 14c0 1.5 1 2.5 2 2.5s2-1 2-2.5"/></svg>
+        </div>
+        <div class="avatar">管</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">早上好，管理员</div>
+          <div class="page-desc">今天是 2026年7月25日 星期六 · 你有 5 项待办</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost">导出报表</button>
+          <button class="btn btn-primary">+ 新建</button>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--blue-bg);color:var(--blue)">人</div>在职人数</div>
+          <div class="stat-value">248<span class="stat-unit"> 人</span></div>
+          <div class="stat-change up">↑ 3 本月新入职</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--green-bg);color:var(--green)">入</div>本月入职</div>
+          <div class="stat-value">5<span class="stat-unit"> 人</span></div>
+          <div class="stat-change up">↑ 较上月 +2</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--orange-bg);color:var(--orange)">出</div>本月离职</div>
+          <div class="stat-value">2<span class="stat-unit"> 人</span></div>
+          <div class="stat-change down">↓ 较上月 -1</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-icon-sm" style="background:var(--red-bg);color:var(--red)">警</div>合同预警</div>
+          <div class="stat-value">7<span class="stat-unit"> 份</span></div>
+          <div class="stat-change down">30天内到期</div>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card span-2">
+          <div class="chart-row" style="margin-bottom:8px">
+            <div class="card-title" style="margin-bottom:0">待办事项</div>
+            <span style="font-size:12px;color:var(--blue);cursor:pointer">全部 →</span>
+          </div>
+          <ul class="todo-list">
+            <li class="todo-item">
+              <div class="todo-check done"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg></div>
+              <span class="todo-text done">审批 · 张伟的请假申请（事假2天）</span>
+              <span class="todo-tag urgent">紧急</span>
+            </li>
+            <li class="todo-item">
+              <div class="todo-check"></div>
+              <span class="todo-text">审批 · 7月工资核算结果确认</span>
+              <span class="todo-tag urgent">紧急</span>
+            </li>
+            <li class="todo-item">
+              <div class="todo-check"></div>
+              <span class="todo-text">合同 · HF-2024-0312 即将到期续签</span>
+              <span class="todo-tag normal">常规</span>
+            </li>
+            <li class="todo-item">
+              <div class="todo-check"></div>
+              <span class="todo-text">绩效 · Q3 目标设定待确认</span>
+              <span class="todo-tag normal">常规</span>
+            </li>
+            <li class="todo-item">
+              <div class="todo-check"></div>
+              <span class="todo-text">考勤 · 李娜异常打卡核实</span>
+              <span class="todo-tag normal">常规</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card span-2">
+          <div class="chart-row" style="margin-bottom:8px">
+            <div class="card-title" style="margin-bottom:0">本月人员变动</div>
+            <span style="font-size:12px;color:var(--fg-3)">7月</span>
+          </div>
+          <div class="chart-placeholder">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="height:40%;background:var(--green)"></div><div class="chart-label">入职5</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="height:18%;background:var(--red)"></div><div class="chart-label">离职2</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="height:28%;background:var(--orange)"></div><div class="chart-label">调岗3</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="height:15%;background:var(--purple)"></div><div class="chart-label">晋升2</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center"><div class="bar" style="height:22%;background:var(--blue)"></div><div class="chart-label">转正3</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card span-2">
+          <div class="chart-row" style="margin-bottom:8px">
+            <div class="card-title" style="margin-bottom:0">公告通知</div>
+            <span style="font-size:12px;color:var(--blue);cursor:pointer">更多 →</span>
+          </div>
+          <ul class="notice-list">
+            <li class="notice-item">
+              <div class="notice-title">关于2026年夏季高温补贴发放的通知</div>
+              <div class="notice-meta"><span>人力资源部</span><span>·</span><span>2026-07-23</span></div>
+            </li>
+            <li class="notice-item">
+              <div class="notice-title">Q3 绩效目标设定截止日期提醒</div>
+              <div class="notice-meta"><span>绩效管理部</span><span>·</span><span>2026-07-20</span></div>
+            </li>
+            <li class="notice-item">
+              <div class="notice-title">企业工作台2.0 系统升级公告</div>
+              <div class="notice-meta"><span>IT 信息部</span><span>·</span><span>2026-07-18</span></div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card span-2" style="background: linear-gradient(135deg, #FF3B30, #FF9500); color: #fff;">
+          <div class="card-title" style="color:rgba(255,255,255,0.8)"><div class="card-icon-sm" style="background:rgba(255,255,255,0.2);color:#fff">!</div>风险预警</div>
+          <div style="margin-top:8px">
+            <div class="alert-item" style="border-color:rgba(255,255,255,0.15)">
+              <div class="alert-dot" style="background:#FFD609"></div>
+              <span style="font-size:13px;flex:1">合同到期 · HF-2024-0312 剩余7天</span>
+            </div>
+            <div class="alert-item" style="border-color:rgba(255,255,255,0.15)">
+              <div class="alert-dot" style="background:#FFD609"></div>
+              <span style="font-size:13px;flex:1">回款逾期 · HF-2025-0518 逾期15天</span>
+            </div>
+            <div class="alert-item" style="border-color:rgba(255,255,255,0.15)">
+              <div class="alert-dot" style="background:#FFD609"></div>
+              <span style="font-size:13px;flex:1">社保异常 · 3人基数待调整</span>
+            </div>
+            <div class="alert-item" style="border:none">
+              <div class="alert-dot" style="background:#FFD609"></div>
+              <span style="font-size:13px;flex:1">考勤异常 · 5人本月缺卡</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
