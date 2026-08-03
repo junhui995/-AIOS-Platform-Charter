@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     if (!instance) return NextResponse.json({ error: "Instance not found" }, { status: 404 });
 
-    const nodes = instance.version.nodes as any[];
+    const nodes = instance.version.nodes as unknown[];
     const targetNode = nodes.find(n => n.id === targetNodeId);
 
     if (!targetNode) return NextResponse.json({ error: "Target node not found in version" }, { status: 400 });

@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // Allows the frontend to send form data and see which nodes will be hit without saving anything.
 export async function POST(req: Request) {
   try {
-    const { definitionId, formData } = await req.json();
+    const { definitionId } = await req.json();
 
     const definition = await prisma.workflowDefinition.findUnique({
       where: { id: definitionId },
@@ -19,8 +19,8 @@ export async function POST(req: Request) {
     }
 
     const version = definition.versions[0];
-    const nodes = version.nodes as any[];
-    const edges = version.edges as any[];
+    const nodes = version.nodes as unknown[];
+    const edges = version.edges as unknown[];
 
     // Simple BFS to trace the execution path based on dummy/test form data
     const startNode = nodes.find(n => n.type === 'input');
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     while (currentNodes.length > 0 && safeLoopBreaker < 50) {
         safeLoopBreaker++;
-        let nextLevelNodes = [];
+        const nextLevelNodes: string[] = [];
 
         for (const currId of currentNodes) {
              const outEdges = edges.filter(e => e.source === currId);

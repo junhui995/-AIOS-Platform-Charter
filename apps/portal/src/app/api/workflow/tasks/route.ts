@@ -42,8 +42,8 @@ export async function POST(req: Request) {
     // 3. Engine Routing Logic (Simplified Engine)
     const instance = task.instance;
     const version = instance.version;
-    const nodes = version.nodes as any[];
-    const edges = version.edges as any[];
+    const nodes = version.nodes as unknown[];
+    const edges = version.edges as unknown[];
 
     if (action === 'REJECT') {
        // Terminate or route back to start (Simplified: Terminate)
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
        // Find outgoing edges from current node
        const outgoingEdges = edges.filter(e => e.source === task.nodeId);
 
-       let nextNodesIds: string[] = [];
+       const nextNodesIds: string[] = [];
 
        if (outgoingEdges.length > 0) {
            // Basic Gateway / Routing Logic
