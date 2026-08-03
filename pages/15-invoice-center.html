@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 发票中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+.dual-tab{display:flex;gap:0;background:var(--bg);border-radius:var(--radius-sm);padding:4px;width:fit-content}
+.dual-tab-btn{padding:10px 24px;border-radius:var(--radius-xs);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}
+.dual-tab-btn.active{background:var(--brand);color:white;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">🏠</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div><div class="nav-item"><span class="icon">🏢</span>相对方</div><div class="nav-item"><span class="icon">💳</span>收付款</div>
+    <div class="nav-item active"><span class="icon">🧾</span>发票中心</div></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">发票中心</div><div class="topbar-subtitle">开票收票闭环 · 核销匹配 · 红蓝对冲</div></div><div class="topbar-right"><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">🧾</div><div><div class="val">¥640K</div><div class="label">累计开票</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">📥</div><div><div class="val">¥380K</div><div class="label">累计收票</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⏳</div><div><div class="val">21</div><div class="label">未开票合同</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">⚠️</div><div><div class="val">¥260K</div><div class="label">核销差额</div></div></div>
+    </div>
+
+    <!-- Dual Tab -->
+    <div class="dual-tab">
+      <div class="dual-tab-btn active">开票记录</div>
+      <div class="dual-tab-btn">收票记录</div>
+      <div class="dual-tab-btn">红蓝对冲</div>
+    </div>
+
+    <!-- Invoice Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header"><div class="card-header-title">开票记录 <span class="count">6笔</span></div>
+        <div class="toolbar"><button class="btn btn-sm btn-primary">+ 开票申请</button><button class="btn btn-sm btn-outline">导出</button></div></div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>发票号码</th><th>关联合同</th><th>相对方</th><th>发票类型</th><th>金额(元)</th><th>税率</th><th>税额(元)</th><th>价税合计</th><th>状态</th><th>核销匹配</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>243456578</td><td>HT-2026-0701</td><td style="font-size:12px">中建三局</td><td style="font-size:12px">增值税专用发票</td><td style="font-weight:600">640,000.10</td><td style="font-size:12px">9%</td><td>57,600.01</td><td style="font-weight:700;color:var(--brand)">697,600.11</td><td><span class="status-pill status-active">已开票</span></td><td><span class="status-pill status-active">已匹配</span></td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>243456577</td><td>HT-2026-0702</td><td style="font-size:12px">同济设计院</td><td style="font-size:12px">增值税专用发票</td><td style="font-weight:600">380,000.00</td><td style="font-size:12px">6%</td><td>22,800.00</td><td style="font-weight:700;color:var(--brand)">402,800.00</td><td><span class="status-pill status-active">已开票</span></td><td><span class="status-pill status-active">已匹配</span></td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>—</td><td>HT-2026-0703</td><td style="font-size:12px;color:var(--orange)">海螺水泥</td><td style="font-size:12px;color:var(--orange)">待开票</td><td style="font-weight:600;color:var(--orange)">450,000.00</td><td style="font-size:12px">13%</td><td style="color:var(--orange)">—</td><td style="color:var(--orange)">—</td><td><span class="status-pill status-pending">未开票</span></td><td><span class="status-pill status-pending">未匹配</span></td><td><button class="btn btn-sm btn-primary">开票</button></td></tr>
+              <tr><td>243456579</td><td>HT-2026-001</td><td style="font-size:12px">万科物业</td><td style="font-size:12px">增值税普通发票</td><td style="font-weight:600">360,000.00</td><td style="font-size:12px">6%</td><td>21,600.00</td><td style="font-weight:700;color:var(--brand)">381,600.00</td><td><span class="status-pill status-active">已开票</span></td><td><span class="status-pill status-pending">差额¥260K</span></td><td><button class="btn btn-sm btn-outline">核销</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Matching -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">开票与收付款核销匹配</div></div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--green-light);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-size:14px;font-weight:600;color:var(--green)">✅ 已完全匹配</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">2笔 · ¥1,100,400.11 · 开票与收付款金额一致</div>
+          </div>
+          <div style="flex:1;background:var(--orange-light);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-size:14px;font-weight:600;color:var(--orange)">⚠️ 差额待核销</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">1笔 · 差额¥260,000 · 收付款大于开票金额</div>
+          </div>
+          <div style="flex:1;background:var(--red-light);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-size:14px;font-weight:600;color:var(--red)">🚨 未匹配</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">1笔 · ¥450,000 · 开票申请未提交</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
