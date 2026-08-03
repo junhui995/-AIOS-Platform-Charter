@@ -1,0 +1,38 @@
+{
+  "name": "aios-monorepo",
+  "version": "1.0.0",
+  "description": "Version：0.1",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "scripts": {
+    "prebuild": "pnpm db:generate",
+    "build": "pnpm -r build",
+    "db:push": "pnpm --filter @aios/data-service exec prisma db push",
+    "db:generate": "pnpm --filter @aios/data-service run generate",
+    "db:seed": "pnpm --filter @aios/data-service run seed",
+    "dev": "pnpm --filter @aios/portal run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junhui995/-AIOS-Platform-Charter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/junhui995/-AIOS-Platform-Charter/issues"
+  },
+  "homepage": "https://github.com/junhui995/-AIOS-Platform-Charter#readme",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72"
+}
