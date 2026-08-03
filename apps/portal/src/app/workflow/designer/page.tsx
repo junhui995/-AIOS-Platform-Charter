@@ -38,7 +38,7 @@ export default function WorkflowDesignerPage() {
       const updatedNode = nodes.find((n) => n.id === selectedNode.id);
       if (updatedNode) setSelectedNode(updatedNode);
     }
-  }, [nodes]);
+  }, [nodes, selectedNode]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge({ ...params, type: 'step' }, eds)),
@@ -87,7 +87,7 @@ export default function WorkflowDesignerPage() {
     ]);
   };
 
-  const updateNodeData = (key: string, value: any) => {
+  const updateNodeData = (key: string, value: unknown) => {
     if (!selectedNode) return;
     setNodes((nds) =>
       nds.map((n) => {

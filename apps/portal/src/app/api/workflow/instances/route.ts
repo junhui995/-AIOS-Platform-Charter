@@ -20,8 +20,8 @@ export async function POST(req: Request) {
     }
 
     const latestVersion = definition.versions[0];
-    const nodes = latestVersion.nodes as any[];
-    const edges = latestVersion.edges as any[];
+    const nodes = latestVersion.nodes as unknown[];
+    const edges = latestVersion.edges as unknown[];
 
     // Find start node
     const startNode = nodes.find(n => n.type === 'input');
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     // Find the first task node (assuming simple linear for initial creation)
     const firstEdge = edges.find(e => e.source === startNode.id);
-    let initialCurrentNodes = [];
+    const initialCurrentNodes: string[] = [];
     if (firstEdge) {
       initialCurrentNodes.push(firstEdge.target);
     }
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(instance);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to start process instance:", error);
     return NextResponse.json({ error: "Failed to start process instance" }, { status: 500 });
   }
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
        orderBy: { startedAt: 'desc' }
      });
      return NextResponse.json(instances);
-   } catch (error) {
+   } catch (error: unknown) {
      return NextResponse.json({ error: "Failed to fetch instances" }, { status: 500 });
    }
 }
