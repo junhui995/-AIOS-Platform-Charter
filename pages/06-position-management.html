@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 岗位管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}
+.nav-item .icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.search-pill{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--text2)}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}.card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-primary:hover{background:#1D4ED8;transform:scale(1.03)}
+.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}
+.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+/* Job level ladder */
+.ladder{display:flex;align-items:flex-end;gap:8px;padding:16px 0}
+.ladder-step{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .2s}
+.ladder-step:hover{transform:scale(1.05)}
+.ladder-step .bar{border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:600;min-width:80px}
+.ladder-step .label{font-size:11px;color:var(--text3)}
+.ladder-step .count{font-size:12px;font-weight:600}
+/* Role tag */
+.role-tag{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:var(--purple-light);color:var(--purple)}
+.salary-range{font-size:12px;color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div>
+    <div class="nav-item"><span class="icon">👤</span>人员中心</div>
+    <div class="nav-item active"><span class="icon">📌</span>岗位管理</div>
+    <div class="nav-item"><span class="icon">📅</span>考勤管理</div>
+    <div class="nav-item"><span class="icon">🏆</span>绩效管理</div>
+    <div class="nav-item"><span class="icon">💰</span>工资计算</div>
+    <div class="nav-item"><span class="icon">🧾</span>工资条</div>
+    <div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">📑</span>合同首页</div>
+    <div class="nav-item"><span class="icon">📋</span>合同台账</div>
+    <div class="nav-item"><span class="icon">💳</span>收付款</div>
+    <div class="nav-item"><span class="icon">🧾</span>发票中心</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left"><div class="topbar-title">岗位管理</div><div class="topbar-subtitle">编制控制 · 权限继承 · 职级体系</div></div>
+    <div class="topbar-right"><div class="search-pill">🔍 搜索岗位/职级</div><div class="avatar">王</div></div>
+  </div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">📌</div><div><div class="val">28</div><div class="label">岗位总数</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">✅</div><div><div class="val">18</div><div class="label">已满编</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⚠️</div><div><div class="val">8</div><div class="label">缺编</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">🚫</div><div><div class="val">2</div><div class="label">超编</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--purple)">🔒</div><div><div class="val">6</div><div class="label">职级层级</div></div></div>
+    </div>
+
+    <!-- Level Ladder -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">职级体系阶梯</div><button class="btn btn-sm btn-outline">编辑职级</button></div>
+      <div class="card-body">
+        <div class="ladder">
+          <div class="ladder-step"><div class="bar" style="height:24px;background:var(--text3)">P1</div><div class="label">初级</div><div class="count">8人</div><div class="salary-range">¥6K-10K</div></div>
+          <div class="ladder-step"><div class="bar" style="height:40px;background:var(--orange)">P2</div><div class="label">中级I</div><div class="count">12人</div><div class="salary-range">¥10K-14K</div></div>
+          <div class="ladder-step"><div class="bar" style="height:56px;background:var(--brand)">P3</div><div class="label">中级II</div><div class="count">15人</div><div class="salary-range">¥14K-18K</div></div>
+          <div class="ladder-step"><div class="bar" style="height:72px;background:var(--green)">P4</div><div class="label">中级III</div><div class="count">18人</div><div class="salary-range">¥18K-24K</div></div>
+          <div class="ladder-step"><div class="bar" style="height:88px;background:var(--purple)">P5</div><div class="label">高级</div><div class="count">10人</div><div class="salary-range">¥24K-32K</div></div>
+          <div class="ladder-step"><div class="bar" style="height:104px;background:var(--text)">P6</div><div class="label">资深</div><div class="count">3人</div><div class="salary-range">¥32K+</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header">
+        <div class="card-header-title">岗位编制表 <span class="count">28岗位</span></div>
+        <div class="toolbar">
+          <div class="pill-tabs" style="margin-bottom:0"><div class="pill-tab active">全部</div><div class="pill-tab">已满编</div><div class="pill-tab">缺编</div><div class="pill-tab">超编</div></div>
+          <button class="btn btn-sm btn-primary">+ 新增岗位</button>
+          <button class="btn btn-sm btn-outline">导出</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>岗位编码</th><th>岗位名称</th><th>所属部门</th><th>职级</th><th>编制数</th><th>在职数</th><th>编制状态</th><th>默认角色</th><th>薪酬范围</th><th>岗位说明</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>POS-GC-PM</td><td style="font-weight:600">项目经理</td><td>工程管理部</td><td>P6</td><td>5</td><td>5</td><td><span class="status-pill status-active">已满编</span></td><td><span class="role-tag">工程管理角色</span></td><td>¥32K+</td><td style="color:var(--text2);font-size:12px">项目管理与协调…</td><td><button class="btn btn-sm btn-outline">编辑</button></td></tr>
+              <tr><td>POS-GC-EN</td><td style="font-weight:600">施工工程师</td><td>工程管理部</td><td>P4</td><td>8</td><td>6</td><td><span class="status-pill status-pending">缺编2人</span></td><td><span class="role-tag">施工执行角色</span></td><td>¥18K-24K</td><td style="color:var(--text2);font-size:12px">施工现场管理…</td><td><button class="btn btn-sm btn-outline">编辑</button></td></tr>
+              <tr><td>POS-MKT-SM</td><td style="font-weight:600">销售经理</td><td>市场营销部</td><td>P5</td><td>3</td><td>3</td><td><span class="status-pill status-active">已满编</span></td><td><span class="role-tag">销售管理角色</span></td><td>¥24K-32K</td><td style="color:var(--text2);font-size:12px">市场开拓与…</td><td><button class="btn btn-sm btn-outline">编辑</button></td></tr>
+              <tr><td>POS-QA-QI</td><td style="font-weight:600">质量检查员</td><td>质量安全部</td><td>P3</td><td>4</td><td>4</td><td><span class="status-pill status-active">已满编</span></td><td><span class="role-tag">质量检查角色</span></td><td>¥14K-18K</td><td style="color:var(--text2);font-size:12px">工程质量检查…</td><td><button class="btn btn-sm btn-outline">编辑</button></td></tr>
+              <tr><td>POS-ADM-AS</td><td style="font-weight:600">行政专员</td><td>综合行政部</td><td>P2</td><td>3</td><td>2</td><td><span class="status-pill status-pending">缺编1人</span></td><td><span class="role-tag">行政事务角色</span></td><td>¥10K-14K</td><td style="color:var(--text2);font-size:12px">行政事务处理…</td><td><button class="btn btn-sm btn-outline">编辑</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permission Inheritance -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">权限继承规则</div><button class="btn btn-sm btn-outline">配置权限模板</button></div>
+      <div class="card-body">
+        <div style="display:flex;gap:16px">
+          <div style="flex:1;background:var(--purple-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--purple);margin-bottom:8px">岗位 → 角色 → 权限</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">
+              岗位绑定默认角色模板<br>
+              换岗 → 角色自动切换<br>
+              数据权限按部门+项目隔离<br>
+              防止非标岗位泛滥
+            </div>
+          </div>
+          <div style="flex:1;background:var(--green-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">编制刚性控制</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">
+              编制数 = 最大允许在职数<br>
+              超编入职需审批特批<br>
+              缺编自动触发招聘提醒<br>
+              实时编制看板可视化
+            </div>
+          </div>
+          <div style="flex:1;background:var(--brand-light);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">岗位序列档案</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">
+              岗位信息 + 岗位说明<br>
+              岗位序列（管理/技术/职能）<br>
+              对应职级标准 + 薪酬范围<br>
+              统一维护防止非标化
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
