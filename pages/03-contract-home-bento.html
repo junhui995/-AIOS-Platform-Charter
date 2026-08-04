@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台 2.0 - 合同首页（Bento Box）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F5F5F7;
+    --surface: #FFFFFF;
+    --fg: #1D1D1F;
+    --fg-2: #6E6E73;
+    --fg-3: #AEAEB2;
+    --border: #E5E5EA;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.08);
+    --blue: #0071E3;
+    --blue-bg: #E8F1FE;
+    --green: #34C759;
+    --green-bg: #E8F8EE;
+    --orange: #FF9500;
+    --orange-bg: #FFF4E5;
+    --red: #FF3B30;
+    --red-bg: #FFEBEA;
+    --purple: #AF52DE;
+    --purple-bg: #F5EEFE;
+    --teal: #5AC8FA;
+    --teal-bg: #E0F4FE;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 20px; }
+  .logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #0071E3, #5856D6); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+  .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .nav-section { margin-bottom: 16px; }
+  .nav-section-title { font-size: 11px; font-weight: 600; color: var(--fg-3); padding: 0 20px 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 20px; font-size: 13px; color: var(--fg-2); cursor: pointer; border-radius: 8px; margin: 0 8px; }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .main { flex: 1; overflow-x: hidden; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 28px; }
+  .breadcrumb { font-size: 13px; color: var(--fg-3); }
+  .breadcrumb b { color: var(--fg); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .search-box { width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 7px 16px; font-size: 13px; font-family: var(--font); }
+  .search-box:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-bg); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-sm); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #FF9500, #FF2D55); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 600; }
+  .content { padding: 8px 28px 28px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; }
+  .page-desc { font-size: 14px; color: var(--fg-2); margin-top: 2px; }
+  .btn { padding: 8px 18px; font-size: 13px; font-family: var(--font); font-weight: 500; border: none; cursor: pointer; border-radius: 980px; }
+  .btn-ghost { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--surface); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .card-icon-sm { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; }
+  .stat-unit { font-size: 14px; font-weight: 400; color: var(--fg-3); }
+  .stat-sub { font-size: 12px; color: var(--fg-2); margin-top: 8px; display: flex; gap: 12px; }
+  .span-full { grid-column: span 3; }
+  .chart-row { display: flex; justify-content: space-between; align-items: center; }
+  .alert-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg); border-radius: 12px; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .alert-text { font-size: 13px; flex: 1; }
+  .alert-time { font-size: 11px; color: var(--fg-3); }
+  table.data-table { width: 100%; border-collapse: collapse; }
+  table.data-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-3); font-weight: 600; text-align: left; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  table.data-table td { font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover { background: var(--bg); }
+  .badge { font-size: 11px; padding: 2px 10px; border-radius: 6px; font-weight: 500; }
+  .badge.active { background: var(--green-bg); color: var(--green); }
+  .badge.expiring { background: var(--orange-bg); color: var(--orange); }
+  .badge.expired { background: var(--red-bg); color: var(--red); }
+  .badge.draft { background: var(--bg); color: var(--fg-2); }
+  .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .action-btn { font-size: 11px; padding: 3px 12px; border: none; border-radius: 12px; cursor: pointer; background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  .action-btn:hover { background: var(--blue); color: #fff; }
+  .flow-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .flow-step { display: flex; align-items: center; }
+  .flow-box { padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 10px; min-width: 70px; text-align: center; background: var(--bg); color: var(--fg-2); }
+  .flow-box.active { background: var(--blue); color: #fff; }
+  .flow-arrow { width: 24px; height: 2px; background: var(--fg-3); margin: 0 2px; border-radius: 1px; }
+  .flow-desc { font-size: 10px; color: var(--fg-3); margin-top: 4px; text-align: center; min-width: 70px; }
+  .principles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .principle { padding: 16px; background: var(--bg); border-radius: 14px; }
+  .principle-num { font-size: 11px; color: var(--fg-3); font-weight: 600; margin-bottom: 6px; }
+  .principle-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .principle-desc { font-size: 12px; color: var(--fg-2); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">HF</div>
+      <div class="logo-text">华复保利</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">工作台</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="6" height="6" rx="2"/><rect x="10" y="2" width="6" height="6" rx="2"/><rect x="2" y="10" width="6" height="6" rx="2"/><rect x="10" y="10" width="6" height="6" rx="2"/></svg>
+        <span>首页</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="6" r="2.5"/><circle cx="13" cy="6" r="2.5"/><path d="M1 16c0-3 2-5 4-5M17 16c0-3-2-5-4-5"/></svg>
+        <span>组织中心</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.5 3-6 6-6s6 2.5 6 6"/></svg>
+        <span>人员档案</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="13" rx="2"/></svg>
+        <span>考勤管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 16V7l7-4 7 4v9"/></svg>
+        <span>绩效管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/></svg>
+        <span>工资核算</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="2"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="10" y2="12"/></svg>
+        <span>合同首页</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="14" height="12" rx="2"/></svg>
+        <span>合同台账</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h14M2 9h14M2 12h10"/></svg>
+        <span>收付款管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="2"/></svg>
+        <span>发票中心</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">合同管理 / <b>合同首页</b></div>
+      </div>
+      <div class="topbar-right">
+        <input type="text" class="search-box" placeholder="搜索合同...">
+        <div class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1c-3.5 0-6 2.5-6 6v3.5L1.5 12h15L15 10.5V7c0-3.5-2.5-6-6-6z"/></svg>
+        </div>
+        <div class="avatar">管</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">合同驾驶舱</div>
+          <div class="page-desc">合同全生命周期管理 · 实时数据</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost">导出台账</button>
+          <button class="btn btn-primary">+ 新建合同</button>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <div class="card" style="background: linear-gradient(135deg, #0071E3, #5856D6); color:#fff;">
+          <div class="card-title" style="color:rgba(255,255,255,0.8)"><div class="card-icon-sm" style="background:rgba(255,255,255,0.2);color:#fff">收</div>应收金额</div>
+          <div class="stat-value">30.6<span class="stat-unit" style="color:rgba(255,255,255,0.7)"> M ¥</span></div>
+          <div class="stat-sub" style="color:rgba(255,255,255,0.7)"><span>合同 86 份</span><span>本年新增 23</span></div>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #34C759, #30D158); color:#fff;">
+          <div class="card-title" style="color:rgba(255,255,255,0.8)"><div class="card-icon-sm" style="background:rgba(255,255,255,0.2);color:#fff">回</div>已回款</div>
+          <div class="stat-value">18.4<span class="stat-unit" style="color:rgba(255,255,255,0.7)"> M ¥</span></div>
+          <div class="stat-sub" style="color:rgba(255,255,255,0.7)"><span>回款率 60.1%</span><span>待收 12.2M</span></div>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #FF9500, #FF6B00); color:#fff;">
+          <div class="card-title" style="color:rgba(255,255,255,0.8)"><div class="card-icon-sm" style="background:rgba(255,255,255,0.2);color:#fff">付</div>已付款</div>
+          <div class="stat-value">12.1<span class="stat-unit" style="color:rgba(255,255,255,0.7)"> M ¥</span></div>
+          <div class="stat-sub" style="color:rgba(255,255,255,0.7)"><span>付款率 39.5%</span><span>待付 7.5M</span></div>
+        </div>
+      </div>
+
+      <div class="bento-grid" style="grid-template-columns: 1fr 1fr">
+        <div class="card">
+          <div class="chart-row" style="margin-bottom:12px">
+            <div class="card-title" style="margin-bottom:0">合同预警</div>
+            <span style="font-size:12px;color:var(--red)">待处理 4 项</span>
+          </div>
+          <div class="alert-list">
+            <div class="alert-item">
+              <div class="alert-dot" style="background:var(--red)"></div>
+              <div class="alert-text">HF-2024-0312 · 即将到期，剩余 7 天</div>
+              <div class="alert-time">07-25</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-dot" style="background:var(--red)"></div>
+              <div class="alert-text">HF-2025-0518 · 回款逾期 15 天</div>
+              <div class="alert-time">07-20</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-dot" style="background:var(--orange)"></div>
+              <div class="alert-text">HF-2024-0923 · 30天内到期</div>
+              <div class="alert-time">07-18</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-dot" style="background:var(--orange)"></div>
+              <div class="alert-text">HF-2025-0712 · 付款计划待确认</div>
+              <div class="alert-time">07-15</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">全生命周期状态流转</div>
+          <div style="margin-top:16px">
+            <div class="flow-steps">
+              <div class="flow-step"><div><div class="flow-box">起草</div><div class="flow-desc">拟定条款</div></div></div>
+              <div class="flow-step"><div class="flow-arrow"></div></div>
+              <div class="flow-step"><div><div class="flow-box active">审批</div><div class="flow-desc">多级审核</div></div></div>
+              <div class="flow-step"><div class="flow-arrow"></div></div>
+              <div class="flow-step"><div><div class="flow-box">签署</div><div class="flow-desc">电子签章</div></div></div>
+              <div class="flow-step"><div class="flow-arrow"></div></div>
+              <div class="flow-step"><div><div class="flow-box active">履行</div><div class="flow-desc">收付款</div></div></div>
+              <div class="flow-step"><div class="flow-arrow"></div></div>
+              <div class="flow-step"><div><div class="flow-box">变更</div><div class="flow-desc">补充协议</div></div></div>
+              <div class="flow-step"><div class="flow-arrow"></div></div>
+              <div class="flow-step"><div><div class="flow-box">归档</div><div class="flow-desc">电子存档</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bento-grid" style="grid-template-columns: 1fr">
+        <div class="card">
+          <div class="chart-row" style="margin-bottom:8px">
+            <div class="card-title" style="margin-bottom:0">合同台账</div>
+            <span style="font-size:12px;color:var(--blue);cursor:pointer">查看全部 →</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr><th>合同编号</th><th>合同名称</th><th>对方单位</th><th>金额(¥)</th><th>签订日期</th><th>到期日期</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>HF-2026-0115</td><td>智慧园区运维服务</td><td>保利科技</td>
+                <td class="amount">3,200,000</td><td>2026-01-15</td><td>2027-01-14</td>
+                <td><span class="badge active">履行中</span></td>
+                <td><span class="action-btn">下推</span></td>
+              </tr>
+              <tr>
+                <td>HF-2025-0518</td><td>设备采购合同</td><td>华复机电</td>
+                <td class="amount">1,850,000</td><td>2025-05-18</td><td>2026-08-18</td>
+                <td><span class="badge expiring">即将到期</span></td>
+                <td><span class="action-btn">续签</span></td>
+              </tr>
+              <tr>
+                <td>HF-2024-0312</td><td>年度维保协议</td><td>保利物业</td>
+                <td class="amount">960,000</td><td>2024-08-01</td><td>2026-08-01</td>
+                <td><span class="badge expired">已过期</span></td>
+                <td><span class="action-btn">续签</span></td>
+              </tr>
+              <tr>
+                <td>HF-2025-0923</td><td>系统集成项目</td><td>中建三局</td>
+                <td class="amount">5,600,000</td><td>2025-09-23</td><td>2026-08-23</td>
+                <td><span class="badge expiring">即将到期</span></td>
+                <td><span class="action-btn">下推</span></td>
+              </tr>
+              <tr>
+                <td>HF-2026-0301</td><td>人力资源外包</td><td>智联人才</td>
+                <td class="amount">720,000</td><td>2026-03-01</td><td>2027-02-28</td>
+                <td><span class="badge active">履行中</span></td>
+                <td><span class="action-btn">下推</span></td>
+              </tr>
+              <tr>
+                <td>HF-2026-0218</td><td>办公租赁合同</td><td>华城置业</td>
+                <td class="amount">1,200,000</td><td>2026-02-18</td><td>2027-02-17</td>
+                <td><span class="badge active">履行中</span></td>
+                <td><span class="action-btn">下推</span></td>
+              </tr>
+              <tr>
+                <td>HF-2026-0712</td><td>云服务采购</td><td>腾讯云</td>
+                <td class="amount">480,000</td><td>2026-07-12</td><td>2027-07-11</td>
+                <td><span class="badge draft">待确认</span></td>
+                <td><span class="action-btn">确认</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="principles">
+        <div class="principle">
+          <div class="principle-num">01</div>
+          <div class="principle-title">统一编码</div>
+          <div class="principle-desc">HF-年份-序号，全局唯一</div>
+        </div>
+        <div class="principle">
+          <div class="principle-num">02</div>
+          <div class="principle-title">统一台账</div>
+          <div class="principle-desc">收/付合同同一台账管理</div>
+        </div>
+        <div class="principle">
+          <div class="principle-num">03</div>
+          <div class="principle-title">统一收付</div>
+          <div class="principle-desc">合同下推自动生成收付计划</div>
+        </div>
+        <div class="principle">
+          <div class="principle-num">04</div>
+          <div class="principle-title">统一发票</div>
+          <div class="principle-desc">收付款自动关联发票</div>
+        </div>
+        <div class="principle">
+          <div class="principle-num">05</div>
+          <div class="principle-title">统一归档</div>
+          <div class="principle-desc">电子化全生命周期存档</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
