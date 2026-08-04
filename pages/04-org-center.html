@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 组织中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;
+  --brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;
+  --orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;
+  --border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);
+  --radius:20px;--radius-sm:12px;--radius-xs:8px;
+}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+/* Sidebar */
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;color:var(--text);display:flex;align-items:center;gap:8px}
+.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}
+.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}
+.nav-item .icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.nav-item .badge{background:var(--red);color:white;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:auto}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-title{font-size:20px;font-weight:700}
+.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),#7C3AED);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.search-pill{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--text2)}
+.breadcrumb{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.breadcrumb a{color:var(--text2);text-decoration:none}
+.breadcrumb .sep{color:var(--text3)}
+/* Content */
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;gap:24px}
+/* Left: Org Tree */
+.org-panel{width:320px;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-header-title{font-size:15px;font-weight:700}
+.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+/* Org Tree */
+.tree-node{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-xs);cursor:pointer;transition:all .15s;font-size:13px}
+.tree-node:hover{background:var(--bg)}
+.tree-node.selected{background:var(--brand-light);color:var(--brand);font-weight:600}
+.tree-node .expand{width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px;transition:transform .2s}
+.tree-node .expand.open{transform:rotate(90deg)}
+.tree-node .name{flex:1}
+.tree-node .meta{color:var(--text3);font-size:11px}
+.tree-children{padding-left:20px}
+.tree-children.collapsed{display:none}
+/* Matrix tag */
+.matrix-tag{display:inline-flex;align-items:center;gap:4px;background:var(--orange-light);color:var(--orange);font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600}
+/* Stats cards */
+.stats-row{display:flex;gap:12px;flex-wrap:wrap}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:120px}
+.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}
+.stat-mini .val{font-size:18px;font-weight:700}
+.stat-mini .label{font-size:11px;color:var(--text3)}
+/* Right: Detail */
+.detail-panel{flex:1;display:flex;flex-direction:column;gap:20px}
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--bg)}
+th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}
+td{padding:10px 16px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}
+.status-pending{background:var(--orange-light);color:var(--orange)}
+.status-inactive{background:var(--red-light);color:var(--red)}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}
+.btn-primary:hover{background:#1D4ED8;transform:scale(1.03)}
+.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{background:var(--bg)}
+.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px;padding:0}
+/* Dual org toggle */
+.dual-toggle{display:flex;align-items:center;gap:0;background:var(--bg);border-radius:99px;padding:4px}
+.dual-toggle-btn{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}
+.dual-toggle-btn.active{background:var(--brand);color:white}
+/* Pill tabs */
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}
+.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group">
+    <div class="nav-group-label">人事模块</div>
+    <div class="nav-item active"><span class="icon">🏛️</span>组织中心</div>
+    <div class="nav-item"><span class="icon">👤</span>人员中心</div>
+    <div class="nav-item"><span class="icon">📌</span>岗位管理</div>
+    <div class="nav-item"><span class="icon">📅</span>考勤管理</div>
+    <div class="nav-item"><span class="icon">🏆</span>绩效管理</div>
+    <div class="nav-item"><span class="icon">💰</span>工资计算</div>
+    <div class="nav-item"><span class="icon">🧾</span>工资条</div>
+    <div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">📑</span>合同首页</div>
+    <div class="nav-item"><span class="icon">📋</span>合同台账</div>
+    <div class="nav-item"><span class="icon">🏢</span>相对方</div>
+    <div class="nav-item"><span class="icon">💳</span>收付款</div>
+    <div class="nav-item"><span class="icon">🧾</span>发票中心</div>
+  </div>
+  <div class="nav-group" style="margin-top:auto">
+    <div class="nav-item"><span class="icon">🏠</span>返回首页</div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">组织中心</div>
+      <div class="topbar-subtitle">组织层级树表 · 矩阵架构支撑 · 编制控制</div>
+    </div>
+    <div class="topbar-right">
+      <div class="search-pill">🔍 搜索组织/岗位/人员</div>
+      <div class="avatar">王</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Left: Org Tree -->
+    <div class="org-panel">
+      <!-- Dual Org Toggle -->
+      <div class="dual-toggle">
+        <div class="dual-toggle-btn active">行政组织</div>
+        <div class="dual-toggle-btn">矩阵项目</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--brand)">🏛️</div>
+          <div><div class="val">3</div><div class="label">公司</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--green)">📂</div>
+          <div><div class="val">12</div><div class="label">部门</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--orange)">📌</div>
+          <div><div class="val">28</div><div class="label">岗位</div></div>
+        </div>
+      </div>
+
+      <!-- Tree Card -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <div class="card-header-title">组织架构树 <span class="count">3公司 / 12部门</span></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-outline">+ 新增部门</button>
+            <button class="btn btn-sm btn-outline">展开全部</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:8px">
+          <!-- Root: 华复保利集团 -->
+          <div class="tree-node selected">
+            <span class="expand open">▶</span>
+            <span class="name" style="font-weight:600">华复保利集团</span>
+            <span class="meta">3部门 · 86人</span>
+            <span class="matrix-tag">项目制</span>
+          </div>
+          <div class="tree-children">
+            <!-- 子：华复保利建设 -->
+            <div class="tree-node">
+              <span class="expand open">▶</span>
+              <span class="name">华复保利建设有限公司</span>
+              <span class="meta">4部门 · 42人</span>
+            </div>
+            <div class="tree-children">
+              <div class="tree-node">
+                <span class="expand">▶</span>
+                <span class="name">工程管理部</span>
+                <span class="meta">3岗位 · 15人</span>
+              </div>
+              <div class="tree-node">
+                <span class="expand">▶</span>
+                <span class="name">质量安全部</span>
+                <span class="meta">2岗位 · 8人</span>
+              </div>
+              <div class="tree-node">
+                <span class="expand">▶</span>
+                <span class="name">市场营销部</span>
+                <span class="meta">4岗位 · 12人</span>
+              </div>
+              <div class="tree-node">
+                <span class="expand">▶</span>
+                <span class="name">综合行政部</span>
+                <span class="meta">3岗位 · 7人</span>
+              </div>
+            </div>
+            <!-- 子：华复保利投资 -->
+            <div class="tree-node">
+              <span class="expand">▶</span>
+              <span class="name">华复保利投资有限公司</span>
+              <span class="meta">3部门 · 28人</span>
+            </div>
+            <!-- 子：华复保利物业 -->
+            <div class="tree-node">
+              <span class="expand">▶</span>
+              <span class="name">华复保利物业管理有限公司</span>
+              <span class="meta">2部门 · 16人</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Detail Panel -->
+    <div class="detail-panel">
+      <!-- Department Detail Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-title">工程管理部 · 组织详情</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-outline">编辑</button>
+            <button class="btn btn-sm btn-primary">+ 新增岗位</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;gap:24px;margin-bottom:16px">
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">组织编码</div>
+              <div style="font-size:14px;font-weight:600">ORG-BJ-GC-001</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">负责人</div>
+              <div style="font-size:14px;font-weight:600">陈建国</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">编制人数</div>
+              <div style="font-size:14px;font-weight:600">15 <span style="color:var(--text3);font-size:12px">/ 在职15</span></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">成本中心</div>
+              <div style="font-size:14px;font-weight:600">CC-GC-001</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">状态</div>
+              <div><span class="status-pill status-active">正常</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Positions Table -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <div class="card-header-title">岗位列表 <span class="count">3岗位</span></div>
+          <div class="toolbar">
+            <button class="btn btn-sm btn-outline">筛选</button>
+            <button class="btn btn-sm btn-outline">导出</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="pill-tabs">
+            <div class="pill-tab active">全部岗位</div>
+            <div class="pill-tab">已满编</div>
+            <div class="pill-tab">缺编</div>
+            <div class="pill-tab">超编</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>岗位编码</th>
+                  <th>岗位名称</th>
+                  <th>所属职级</th>
+                  <th>编制数</th>
+                  <th>在职数</th>
+                  <th>缺编</th>
+                  <th>默认角色</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>POS-GC-PM</td>
+                  <td style="font-weight:600">项目经理</td>
+                  <td>P6 (高级)</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td><span style="color:var(--green)">0</span></td>
+                  <td>工程管理角色</td>
+                  <td><span class="status-pill status-active">已满编</span></td>
+                  <td><button class="btn btn-sm btn-outline">编辑</button></td>
+                </tr>
+                <tr>
+                  <td>POS-GC-EN</td>
+                  <td style="font-weight:600">施工工程师</td>
+                  <td>P4 (中级)</td>
+                  <td>8</td>
+                  <td>6</td>
+                  <td><span style="color:var(--red)">2</span></td>
+                  <td>施工执行角色</td>
+                  <td><span class="status-pill status-pending">缺编</span></td>
+                  <td><button class="btn btn-sm btn-outline">编辑</button></td>
+                </tr>
+                <tr>
+                  <td>POS-GC-QA</td>
+                  <td style="font-weight:600">质量监督员</td>
+                  <td>P3 (初级)</td>
+                  <td>4</td>
+                  <td>4</td>
+                  <td><span style="color:var(--green)">0</span></td>
+                  <td>质量检查角色</td>
+                  <td><span class="status-pill status-active">已满编</span></td>
+                  <td><button class="btn btn-sm btn-outline">编辑</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrix Projects -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-title">矩阵项目挂载 <span class="count">2项目</span></div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;background:var(--orange-light);border-radius:var(--radius-sm);padding:12px 16px">
+              <div style="font-size:12px;color:var(--orange);font-weight:600;margin-bottom:4px">📍 保利·云上项目</div>
+              <div style="font-size:13px">挂载人员：陈建国、王亚、刘伟</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">项目编码：PRJ-2026-001 · 成本中心分摊：40%</div>
+            </div>
+            <div style="flex:1;background:var(--brand-light);border-radius:var(--radius-sm);padding:12px 16px">
+              <div style="font-size:12px;color:var(--brand);font-weight:600;margin-bottom:4px">📍 华复·翡翠湾</div>
+              <div style="font-size:13px">挂载人员：张明、李华</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">项目编码：PRJ-2026-002 · 成本中心分摊：60%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
