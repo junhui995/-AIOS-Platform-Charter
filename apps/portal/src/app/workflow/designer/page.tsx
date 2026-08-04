@@ -31,7 +31,7 @@ export default function WorkflowDesignerPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [availableForms, setAvailableForms] = useState<any[]>([]);
+  const [availableForms, setAvailableForms] = useState<unknown[]>([]);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   useEffect(() => {
