@@ -31,6 +31,14 @@ export default function WorkflowDesignerPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [availableForms, setAvailableForms] = useState<any[]>([]);
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+
+  useEffect(() => {
+     fetch('/api/workflow/forms').then(res => res.json()).then(data => {
+         if (Array.isArray(data)) setAvailableForms(data);
+     }).catch(console.error);
+  }, []);
 
   // Sync selected node data when nodes change
   useEffect(() => {
@@ -117,8 +125,7 @@ export default function WorkflowDesignerPage() {
           code: 'FLOW_' + Date.now(),
           nodes: nodes,
           edges: edges,
-          version: 1, // trigger version increment
-        })
+          version: 1, formTemplateId: selectedFormId })
       });
       if (res.ok) {
         const data = await res.json();
@@ -145,9 +152,16 @@ export default function WorkflowDesignerPage() {
           <p className="text-sm text-gray-500">支持节点策略配置、网关条件、会签或签与表单绑定。</p>
         </div>
         <div className="flex gap-2">
-           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
-            <FileText className="w-4 h-4 text-purple-600" /> 表单绑定
-          </button>
+           <select
+            value={selectedFormId || ''}
+            onChange={e => setSelectedFormId(e.target.value)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 max-w-[200px]"
+          >
+             <option value="">未绑定表单</option>
+             {availableForms.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+             ))}
+          </select>
           <button onClick={addNode} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
             <PlusCircle className="w-4 h-4 text-blue-600" /> 添加任务节点
           </button>
