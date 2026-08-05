@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利企业工作台 2.0 - 考勤管理（瑞士极简）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #FFFFFF;
+    --fg: #000000;
+    --fg-2: #4B5563;
+    --fg-3: #9CA3AF;
+    --border: #E5E7EB;
+    --border-2: #D1D5DB;
+    --border-strong: #000000;
+    --green: #059669;
+    --red: #DC2626;
+    --yellow: #D97706;
+    --bg-alt: #F9FAFB;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+  .app { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+  .sidebar { border-right: 1px solid var(--border); padding: 0; }
+  .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .sidebar-logo-mark { width: 28px; height: 28px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .sidebar-logo-text { font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+  .nav-section { padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .nav-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); padding: 0 20px 8px; font-weight: 500; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 20px; font-size: 13px; color: var(--fg-2); cursor: pointer; border-left: 3px solid transparent; }
+  .nav-item:hover { background: var(--bg-alt); }
+  .nav-item.active { color: var(--fg); font-weight: 500; border-left-color: var(--border-strong); background: var(--bg-alt); }
+  .nav-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.6; }
+  .nav-item.active .nav-icon { opacity: 1; }
+  .main { padding: 0; overflow-x: hidden; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; border-bottom: 1px solid var(--border); }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .breadcrumb { font-size: 13px; color: var(--fg-3); }
+  .breadcrumb b { color: var(--fg); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .search-box { width: 240px; border: 1px solid var(--border); padding: 6px 12px; font-size: 13px; font-family: var(--font); background: #FAFAFA; }
+  .search-box:focus { outline: none; border-color: var(--border-strong); background: #fff; }
+  .icon-btn { width: 32px; height: 32px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fff; }
+  .icon-btn:hover { border-color: var(--border-strong); }
+  .user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .avatar { width: 28px; height: 28px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+  .content { padding: 32px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+  .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .page-desc { font-size: 13px; color: var(--fg-3); }
+  .btn { padding: 8px 16px; font-size: 13px; font-family: var(--font); font-weight: 500; border: 1px solid var(--border-strong); cursor: pointer; background: #fff; color: var(--fg); }
+  .btn:hover { background: var(--fg); color: #fff; }
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #333; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--border); margin-bottom: 32px; }
+  .stat-card { padding: 24px; border-right: 1px solid var(--border); }
+  .stat-card:last-child { border-right: none; }
+  .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-3); margin-bottom: 8px; font-weight: 500; }
+  .stat-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .stat-unit { font-size: 14px; font-weight: 400; color: var(--fg-3); }
+  .stat-sub { font-size: 12px; color: var(--fg-2); margin-top: 8px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+  .panel { border: 1px solid var(--border); }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .panel-title { font-size: 14px; font-weight: 500; }
+  .panel-body { padding: 0; }
+  .cal-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .cal-month { font-size: 16px; font-weight: 700; }
+  .cal-nav { display: flex; gap: 8px; }
+  .cal-nav button { width: 28px; height: 28px; border: 1px solid var(--border); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .cal-nav button:hover { border-color: var(--border-strong); }
+  .cal-table { width: 100%; border-collapse: collapse; }
+  .cal-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-3); font-weight: 500; padding: 8px 0; border-bottom: 1px solid var(--border); text-align: center; }
+  .cal-table td { width: calc(100% / 7); height: 56px; text-align: center; font-size: 13px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; padding: 6px; position: relative; }
+  .cal-table td:last-child { border-right: none; }
+  .cal-day { font-weight: 500; }
+  .cal-day.muted { color: var(--fg-3); }
+  .cal-day.today { background: #000; color: #fff; display: inline-block; width: 24px; height: 24px; line-height: 24px; }
+  .cal-badge { font-size: 10px; padding: 1px 4px; margin-top: 2px; display: inline-block; }
+  .cal-badge.late { color: var(--red); border: 1px solid var(--red); }
+  .cal-badge.leave { color: var(--yellow); border: 1px solid var(--yellow); }
+  .cal-badge.normal { color: var(--green); }
+  .cal-badge.miss { color: var(--red); }
+  table.data-table { width: 100%; border-collapse: collapse; }
+  table.data-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-3); font-weight: 500; text-align: left; padding: 10px 20px; border-bottom: 1px solid var(--border); }
+  table.data-table td { font-size: 13px; padding: 10px 20px; border-bottom: 1px solid var(--border); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover { background: var(--bg-alt); }
+  .status { font-size: 11px; padding: 2px 8px; border: 1px solid; display: inline-block; }
+  .status.approved { border-color: var(--green); color: var(--green); }
+  .status.pending { border-color: var(--yellow); color: var(--yellow); }
+  .status.rejected { border-color: var(--red); color: var(--red); }
+  .leave-balance { padding: 20px; }
+  .balance-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .balance-item:last-child { border-bottom: none; }
+  .balance-label { font-size: 13px; color: var(--fg-2); }
+  .balance-value { font-size: 18px; font-weight: 700; }
+  .balance-unit { font-size: 12px; color: var(--fg-3); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">HF</div>
+      <div class="sidebar-logo-text">华复保利</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">工作台</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+        <span>首页</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">人事管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="4" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><path d="M1 14c0-2 1.5-4 3-4M15 14c0-2-1.5-4-3-4M5 14c0-1.5 1.5-3 3-3s3 1.5 3 3"/></svg>
+        <span>组织中心</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="5" r="2.5"/><path d="M3 14c0-3 2.5-5 5-5s5 2 5 5"/></svg>
+        <span>人员档案</span>
+      </div>
+      <div class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="3" width="12" height="11"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="5" y1="2" x2="5" y2="4"/><line x1="11" y1="2" x2="11" y2="4"/></svg>
+        <span>考勤管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 14V6l6-4 6 4v8"/><rect x="5" y="8" width="6" height="6"/></svg>
+        <span>绩效管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
+        <span>工资核算</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">合同管理</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="2" width="10" height="12"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="9" y2="11"/></svg>
+        <span>合同首页</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="3" width="12" height="10"/><line x1="2" y1="6" x2="14" y2="6"/></svg>
+        <span>合同台账</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 5h12M2 8h12M2 11h8"/></svg>
+        <span>收付款管理</span>
+      </div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="4" width="12" height="8"/><circle cx="8" cy="8" r="2"/></svg>
+        <span>发票中心</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">系统</div>
+      <div class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg>
+        <span>系统设置</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">人事管理 / <b>考勤管理</b></div>
+      </div>
+      <div class="topbar-right">
+        <input type="text" class="search-box" placeholder="搜索员工...">
+        <div class="icon-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M8 1c-3 0-5 2-5 5v3l-1 2h12l-1-2V6c0-3-2-5-5-5z"/><path d="M6 12c0 1 1 2 2 2s2-1 2-2"/></svg>
+        </div>
+        <div class="user-chip">
+          <div class="avatar">管</div>
+          <span>管理员</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">考勤管理</div>
+          <div class="page-desc">2026年7月 · 实时考勤数据</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn">导出报表</button>
+          <button class="btn btn-primary">补卡审批</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">应出勤</div>
+          <div class="stat-value">126<span class="stat-unit"> 人</span></div>
+          <div class="stat-sub">全公司在册</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">实出勤</div>
+          <div class="stat-value">119<span class="stat-unit"> 人</span></div>
+          <div class="stat-sub">出勤率 94.4%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">迟到 / 缺卡</div>
+          <div class="stat-value">3<span class="stat-unit"> / 4</span></div>
+          <div class="stat-sub">待处理 3 项</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">请假中</div>
+          <div class="stat-value">7<span class="stat-unit"> 人</span></div>
+          <div class="stat-sub">年假 4 · 病假 2 · 事假 1</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">考勤日历</span>
+            <span style="font-size:12px;color:var(--fg-3)">点击日期查看详情</span>
+          </div>
+          <div class="cal-toolbar">
+            <div class="cal-month">2026年7月</div>
+            <div class="cal-nav">
+              <button>‹</button>
+              <button>今</button>
+              <button>›</button>
+            </div>
+          </div>
+          <table class="cal-table">
+            <thead>
+              <tr><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th><th>日</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="cal-day muted">29</span></td>
+                <td><span class="cal-day muted">30</span></td>
+                <td><span class="cal-day">1</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">2</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">3</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day muted">4</span></td>
+                <td><span class="cal-day muted">5</span></td>
+              </tr>
+              <tr>
+                <td><span class="cal-day">6</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">7</span><div class="cal-badge late">迟到 1</div></td>
+                <td><span class="cal-day">8</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">9</span><div class="cal-badge leave">请假 2</div></td>
+                <td><span class="cal-day">10</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day muted">11</span></td>
+                <td><span class="cal-day muted">12</span></td>
+              </tr>
+              <tr>
+                <td><span class="cal-day">13</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">14</span><div class="cal-badge miss">缺卡 1</div></td>
+                <td><span class="cal-day">15</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">16</span><div class="cal-badge leave">请假 3</div></td>
+                <td><span class="cal-day">17</span><div class="cal-badge late">迟到 2</div></td>
+                <td><span class="cal-day muted">18</span></td>
+                <td><span class="cal-day muted">19</span></td>
+              </tr>
+              <tr>
+                <td><span class="cal-day">20</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">21</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day">22</span><div class="cal-badge miss">缺卡 2</div></td>
+                <td><span class="cal-day">23</span><div class="cal-badge leave">请假 1</div></td>
+                <td><span class="cal-day today">24</span><div class="cal-badge normal">正常</div></td>
+                <td><span class="cal-day muted">25</span></td>
+                <td><span class="cal-day muted">26</span></td>
+              </tr>
+              <tr>
+                <td><span class="cal-day">27</span></td>
+                <td><span class="cal-day">28</span></td>
+                <td><span class="cal-day">29</span></td>
+                <td><span class="cal-day">30</span></td>
+                <td><span class="cal-day">31</span></td>
+                <td><span class="cal-day muted">1</span></td>
+                <td><span class="cal-day muted">2</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">请假记录</span>
+            <a href="#" style="font-size:12px;color:var(--fg-2);text-decoration:none">全部 →</a>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr><th>姓名</th><th>类型</th><th>日期</th><th>天数</th><th>状态</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>张明</td><td>年假</td><td>07-22 ~ 07-23</td><td>2.0</td><td><span class="status approved">已批</span></td></tr>
+              <tr><td>李娜</td><td>病假</td><td>07-24 ~ 07-25</td><td>2.0</td><td><span class="status approved">已批</span></td></tr>
+              <tr><td>王强</td><td>事假</td><td>07-28</td><td>1.0</td><td><span class="status pending">待批</span></td></tr>
+              <tr><td>赵芳</td><td>年假</td><td>07-30 ~ 08-03</td><td>5.0</td><td><span class="status pending">待批</span></td></tr>
+              <tr><td>刘伟</td><td>调休</td><td>07-26</td><td>1.0</td><td><span class="status approved">已批</span></td></tr>
+              <tr><td>陈静</td><td>病假</td><td>07-21</td><td>1.0</td><td><span class="status rejected">驳回</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">假期余额</span>
+          <span style="font-size:12px;color:var(--fg-3)">2026年度</span>
+        </div>
+        <div class="leave-balance">
+          <div class="balance-item">
+            <span class="balance-label">年假（全员平均）</span>
+            <span class="balance-value">7.5<span class="balance-unit"> 天 / 10 天</span></span>
+          </div>
+          <div class="balance-item">
+            <span class="balance-label">调休（全员平均）</span>
+            <span class="balance-value">3.2<span class="balance-unit"> 天</span></span>
+          </div>
+          <div class="balance-item">
+            <span class="balance-label">病假（已用 / 额度）</span>
+            <span class="balance-value">12<span class="balance-unit"> 天 / 30 天</span></span>
+          </div>
+          <div class="balance-item">
+            <span class="balance-label">事假（已用）</span>
+            <span class="balance-value">5<span class="balance-unit"> 天</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
