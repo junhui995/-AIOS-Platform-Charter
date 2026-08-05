@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@aios/data-service';
 
-const prisma = new PrismaClient();
+
 
 // Start a new process instance
 export async function POST(req: Request) {
