@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     // Find the latest published version of the definition
     const definition = await prisma.workflowDefinition.findUnique({
       where: { id: definitionId },
-      include: { versions: { orderBy: { version: 'desc' }, take: 1, where: { isPublished: true } } }
+      // include removed
     });
 
     if (!definition || definition.versions.length === 0) {
