@@ -106,3 +106,22 @@ Workflow 的每一个状态跃迁必须被永久记录。
 
 ### 7.7 补运行与后台干预 (Admin Retro-Execution)
 提供后台干预 API (`/api/workflow/retro`)。当流程因为不可抗力卡死（例如人员离职导致找不到上级，或者外部系统回调失败），管理员可以直接强制取消当前停滞的任务，并将流程实例的状态跳转至任意指定节点重新开始计算。
+
+
+## 8. 流程引擎集成开发线路图 (Integration Roadmap)
+
+### 阶段 0: 流程引擎底座 (已完成)
+- 数据库 Schema 扩展 (FormTemplate, WorkflowVersion, ProcessInstance, ProcessTask, ProcessLog)
+- 流程设计器高级配置 UI 与表单模板设计器
+- 后端运行时执行引擎与预测/补运行 API
+
+### 阶段 1: 用户个人工作台 (User Task Center) (当前阶段)
+- 实现统一任务中心 (`/workflow/tasks`)，包含"我的待办"、"我发起的"、"已办列表"
+- 任务执行后端操作处理接口 (`/api/workflow/tasks/user`)
+
+### 阶段 2: 真实业务绑定 (Business Domain Integration)
+- 将请假申请、绩效考评、合同审批等实际业务与工作流引擎打通
+
+### 阶段 3: AI Agent 深度整合 (AI Copilot Integration)
+- AISidebar: 智能识别表单并推荐审批动作
+- Agent: 通过自然语言对话意图识别，自动提取变量并发起对应流程
