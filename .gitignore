@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+build
+.env*
+!*.example
+coverage
+__pycache__
+*.log
