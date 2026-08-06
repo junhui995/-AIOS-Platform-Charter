@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 相对方管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+.tag{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.tag-construction{background:var(--brand-light);color:var(--brand)}.tag-design{background:var(--purple-light);color:var(--purple)}.tag-service{background:var(--green-light);color:var(--green)}.tag-material{background:var(--orange-light);color:var(--orange)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">🏠</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div>
+    <div class="nav-item active"><span class="icon">🏢</span>相对方</div><div class="nav-item"><span class="icon">💳</span>收付款</div><div class="nav-item"><span class="icon">🧾</span>发票中心</div></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">相对方管理</div><div class="topbar-subtitle">客商台账 · 准入资质 · 多账户信息</div></div><div class="topbar-right"><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">🏢</div><div><div class="val">23</div><div class="label">客商总数</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">✅</div><div><div class="val">18</div><div class="label">准入通过</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⏳</div><div><div class="val">3</div><div class="label">资质待审</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">🚫</div><div><div class="val">2</div><div class="label">准入冻结</div></div></div>
+    </div>
+
+    <!-- Counterparty Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header"><div class="card-header-title">客商台账 <span class="count">23家</span></div>
+        <div class="toolbar"><div class="pill-tabs" style="margin-bottom:0"><div class="pill-tab active">全部</div><div class="pill-tab">施工方</div><div class="pill-tab">设计方</div><div class="pill-tab">供应商</div><div class="pill-tab">服务商</div></div>
+        <button class="btn btn-sm btn-primary">+ 新增客商</button></div></div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>客商编码</th><th>企业名称</th><th>企业分类</th><th>注册资本</th><th>准入资质</th><th>关联合同数</th><th>累计交易额</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>CP-001</td><td style="font-weight:600">中建三局集团有限公司</td><td><span class="tag tag-construction">施工总承包</span></td><td style="font-weight:600">¥50亿</td><td><span class="status-pill status-active">特级资质</span></td><td style="font-weight:600">2</td><td style="font-weight:700;color:var(--brand)">¥15.2M</td><td><span class="status-pill status-active">准入通过</span></td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>CP-002</td><td style="font-weight:600">同济建筑设计研究院</td><td><span class="tag tag-design">设计咨询</span></td><td style="font-weight:600">¥8亿</td><td><span class="status-pill status-active">甲级资质</span></td><td style="font-weight:600">1</td><td style="font-weight:700;color:var(--brand)">¥8.4M</td><td><span class="status-pill status-active">准入通过</span></td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>CP-003</td><td style="font-weight:600">万科物业发展有限公司</td><td><span class="tag tag-service">物业管理</span></td><td style="font-weight:600">¥20亿</td><td><span class="status-pill status-active">一级资质</span></td><td>1</td><td style="font-weight:700;color:var(--brand)">¥3.6M</td><td><span class="status-pill status-active">准入通过</span></td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>CP-004</td><td style="font-weight:600">海螺水泥股份有限公司</td><td><span class="tag tag-material">材料供应</span></td><td style="font-weight:600">¥15亿</td><td><span class="status-pill status-pending">资质待审</span></td><td>1</td><td style="font-weight:700;color:var(--brand)">¥2.8M</td><td><span class="status-pill status-pending">资质待审</span></td><td><button class="btn btn-sm btn-primary">审核</button></td></tr>
+              <tr><td>CP-005</td><td style="font-weight:600;color:var(--text3)">华润咨询有限公司</td><td><span class="tag tag-design" style="opacity:0.5">咨询顾问</span></td><td style="color:var(--text3)">¥2亿</td><td><span class="status-pill status-inactive">准入冻结</span></td><td style="color:var(--text3)">0</td><td style="color:var(--text3)">¥1.0M</td><td><span class="status-pill status-inactive">准入冻结</span></td><td><button class="btn btn-sm btn-outline">解冻</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Preview -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">客商详情 · 中建三局集团有限公司</div></div>
+      <div class="card-body">
+        <div style="display:flex;gap:24px">
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:4px">统一社会信用代码</div><div style="font-size:14px;font-weight:600">91420000XXXXXXXXXX</div>
+          </div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--text3);margin-bottom:4px">企业分类编码</div><div style="font-size:14px;font-weight:600">B-施工总承包-特级</div></div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--text3);margin-bottom:4px">银行账户(1)</div><div style="font-size:14px;font-weight:600">中国银行 6217****8888</div></div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--text3);margin-bottom:4px">银行账户(2)</div><div style="font-size:14px;font-weight:600">建设银行 4362****6666</div></div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--text3);margin-bottom:4px">联系人</div><div style="font-size:14px;font-weight:600">张总 · 138****0001</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
