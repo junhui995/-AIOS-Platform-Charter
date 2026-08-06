@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: aios-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: aios_user
+      POSTGRES_PASSWORD: aios_password
+      POSTGRES_DB: aios_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - aios_pgdata:/var/lib/postgresql/data
+
+volumes:
+  aios_pgdata:
