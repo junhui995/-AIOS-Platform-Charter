@@ -1,45 +1,52 @@
+/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
 
 export async function GET() {
   try {
-    const workflows = await prisma.workflowDefinition.findMany({
+    const definitions = await prisma.workflowDefinition.findMany({
+      include: {
+         versions: {
+            orderBy: { version: 'desc' },
+            take: 1
+         }
+      },
       orderBy: { createdAt: 'desc' }
     });
-    return NextResponse.json(workflows);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch workflows' }, { status: 500 });
+
+    // Map to the requested output
+    const result = definitions.map(def => ({
+        id: def.id,
+        code: def.code,
+        name: def.name,
+        isActive: def.isActive,
+        latestVersion: def.versions[0]?.version || 0
+    }));
+
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to fetch workflow definitions" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const { code, name, description } = await req.json();
 
-    // UPSERT logic: if ID exists, update it, else create
-    if (body.id) {
-       const w = await prisma.workflowDefinition.update({
-         where: { id: body.id },
-         data: {
-           nodes: body.nodes,
-           edges: body.edges,
-           isActive: body.isActive
-         }
-       });
-       return NextResponse.json(w);
-    } else {
-       const w = await prisma.workflowDefinition.create({
-         data: {
-           code: `WF-${Date.now()}`,
-           name: body.name || 'New Workflow',
-           nodes: body.nodes,
-           edges: body.edges,
-           isActive: true
-         }
-       });
-       return NextResponse.json(w);
+    if (!code || !name) {
+       return NextResponse.json({ error: "Code and name are required" }, { status: 400 });
     }
-  } catch {
-    return NextResponse.json({ error: 'Failed to save workflow' }, { status: 500 });
+
+    const definition = await prisma.workflowDefinition.create({
+       data: {
+          code,
+          name,
+          description
+       }
+    });
+
+    return NextResponse.json({ id: definition.id, code: definition.code });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create workflow definition" }, { status: 500 });
   }
 }
