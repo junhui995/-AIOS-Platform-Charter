@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 收付款管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+.dual-tab{display:flex;gap:0;background:var(--bg);border-radius:var(--radius-sm);padding:4px;width:fit-content}
+.dual-tab-btn{padding:10px 24px;border-radius:var(--radius-xs);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}
+.dual-tab-btn.active{background:var(--brand);color:white;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">🏠</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div><div class="nav-item"><span class="icon">🏢</span>相对方</div>
+    <div class="nav-item active"><span class="icon">💳</span>收付款</div><div class="nav-item"><span class="icon">🧾</span>发票中心</div></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-left"><div class="topbar-title">收付款管理</div><div class="topbar-subtitle">双标签页 · 核销 · 保证金 · 逾期报警</div></div><div class="topbar-right"><div class="avatar">王</div></div></div>
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--brand)">📥</div><div><div class="val">¥30.6M</div><div class="label">应收总额</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">✅</div><div><div class="val">¥18.4M</div><div class="label">已回款</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">📤</div><div><div class="val">¥12.1M</div><div class="label">已付款</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">🚨</div><div><div class="val">¥1.12M</div><div class="label">逾期应收</div></div></div>
+    </div>
+
+    <!-- Dual Tab -->
+    <div class="dual-tab">
+      <div class="dual-tab-btn active">回款管理</div>
+      <div class="dual-tab-btn">付款管理</div>
+      <div class="dual-tab-btn">核销记录</div>
+      <div class="dual-tab-btn">保证金/押金</div>
+    </div>
+
+    <!-- Collection Table -->
+    <div class="card" style="flex:1">
+      <div class="card-header"><div class="card-header-title">回款记录 <span class="count">8笔</span></div>
+        <div class="toolbar"><button class="btn btn-sm btn-primary">+ 回款登记</button><button class="btn btn-sm btn-outline">导出</button></div></div>
+      <div class="card-body" style="padding:0">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>回款编号</th><th>关联合同</th><th>相对方</th><th>回款金额(元)</th><th>回款日期</th><th>付款方式</th><th>核销状态</th><th>逾期标记</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>RCP-001</td><td>HT-2026-002</td><td style="font-size:12px">保利投资方</td><td style="font-weight:700;color:var(--green)">5,200,000</td><td>2026-03-15</td><td style="font-size:12px">银行转账</td><td><span class="status-pill status-active">已核销</span></td><td>—</td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>RCP-002</td><td>HT-2026-002</td><td style="font-size:12px">保利投资方</td><td style="font-weight:700;color:var(--green)">3,800,000</td><td>2026-06-01</td><td style="font-size:12px">银行转账</td><td><span class="status-pill status-active">已核销</span></td><td>—</td><td><button class="btn btn-sm btn-outline">详情</button></td></tr>
+              <tr><td>RCP-003</td><td>HT-2026-001</td><td style="font-size:12px">中建三局</td><td style="font-weight:700;color:var(--green)">4,550,300</td><td>2026-04-20</td><td style="font-size:12px">银行转账</td><td><span class="status-pill status-pending">部分核销</span></td><td>—</td><td><button class="btn btn-sm btn-outline">核销</button></td></tr>
+              <tr><td>RCP-004</td><td>HT-2026-001</td><td style="font-size:12px;color:var(--red)">中建三局（逾期）</td><td style="font-weight:700;color:var(--red)">1,120,800</td><td style="color:var(--red)">逾期30天+</td><td style="font-size:12px;color:var(--red)">待回款</td><td><span class="status-pill status-inactive">未核销</span></td><td><span style="background:var(--red);color:white;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600">⚠️逾期</span></td><td><button class="btn btn-sm btn-primary">催收</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning -->
+    <div class="card">
+      <div class="card-header"><div class="card-header-title" style="color:var(--red)">逾期未结款预警</div></div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--red-light);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-size:14px;font-weight:600;color:var(--red)">⚠️ 8笔长期未回款</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">逾期应收总额 ¥1,120,800 · 首页自动报警催收</div>
+          </div>
+          <div style="flex:1;background:var(--orange-light);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-size:14px;font-weight:600;color:var(--orange)">⏳ 保证金待返还</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">施工保证金 ¥500,000 · 预计返还日期 2028-12-31</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
