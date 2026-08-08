@@ -1,66 +1,90 @@
-/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
 
+
+
+// Start a new process instance
 export async function POST(req: Request) {
   try {
-    const { versionId, businessType, businessId, title, initiatorId, formData } = await req.json();
+    const body = await req.json();
+    const { definitionId, initiatorId, formData } = body;
 
-    const version = await prisma.workflowVersion.findUnique({
-      where: { id: versionId }
+    // Find the latest published version of the definition
+    const definition = await prisma.workflowDefinition.findUnique({
+      where: { id: definitionId },
+      include: { versions: { orderBy: { version: 'desc' }, take: 1, where: { isPublished: true } } }
     });
 
-    if (!version) return NextResponse.json({ error: "Version not found" }, { status: 404 });
-
-    const nodes = version.nodes as Record<string, unknown>[];
-    const edges = version.edges as Record<string, unknown>[];
-
-    const startNode = nodes.find(n => n.type === 'start' || n.type === 'input');
-    if (!startNode) return NextResponse.json({ error: "Start node missing" }, { status: 400 });
-
-    const firstEdge = edges.find(e => e.source === startNode.id);
-    let initialCurrentNodeId = null;
-    let initialCurrentNodes: string[] = [];
-
-    if (firstEdge) {
-      initialCurrentNodeId = String(firstEdge.target);
-      initialCurrentNodes.push(initialCurrentNodeId);
+    if (!definition || definition.versions.length === 0) {
+      return NextResponse.json({ error: "No published version found for this workflow definition" }, { status: 400 });
     }
 
+    const latestVersion = definition.versions[0];
+    const nodes = latestVersion.nodes as unknown[];
+    const edges = latestVersion.edges as unknown[];
+
+    // Find start node
+    const startNode = nodes.find(n => n.type === 'input');
+    if (!startNode) return NextResponse.json({ error: "No start node defined" }, { status: 400 });
+
+    // Find the first task node (assuming simple linear for initial creation)
+    const firstEdge = edges.find(e => e.source === startNode.id);
+    const initialCurrentNodes: string[] = [];
+    if (firstEdge) {
+      initialCurrentNodes.push(firstEdge.target);
+    }
+
+    // Create the process instance
     const instance = await prisma.processInstance.create({
       data: {
-        instanceNo: 'FLOW_' + Date.now(),
-        versionId: version.id,
-        businessType: businessType || 'GENERIC',
-        businessId: businessId || 'N/A',
-        title: title || 'New Process',
-        initiatorId: initiatorId || 'system',
+        versionId: latestVersion.id,
+        initiatorId: initiatorId,
         formData: formData || {},
-        currentNodeId: initialCurrentNodeId,
         currentNodes: initialCurrentNodes,
         status: "RUNNING",
       }
     });
 
+    // Log the start event
     await prisma.processLog.create({
       data: {
         instanceId: instance.id,
         actionType: 'START',
-        operatorId: initiatorId || 'system',
-        details: { message: 'Started process instance' },
+        operatorId: initiatorId,
+        details: 'Process started',
       }
     });
 
-    if (initialCurrentNodeId) {
-      const nextNode = nodes.find(n => n.id === initialCurrentNodeId);
-      if (nextNode && nextNode.type !== 'end' && nextNode.type !== 'output' && !String(nextNode.id).startsWith('gateway')) {
+    // If there is a next node, create a task for it
+    if (firstEdge) {
+      const nextNode = nodes.find(n => n.id === firstEdge.target);
+      if (nextNode && nextNode.type !== 'output' && !nextNode.id.startsWith('gateway')) {
+
+         let assigneeId = null;
+         let candidateGroup = null;
+
+         // Extremely simplified Assignee Resolution Strategy
+         // In reality, this would query org structure (Direct Manager, Role, etc)
+         if (nextNode.data.assigneeStrategy === 'DIRECT_MANAGER') {
+            candidateGroup = "MANAGER_ROLE"; // Placeholder
+         } else if (nextNode.data.assigneeStrategy === 'SPECIFIC_ROLE') {
+            candidateGroup = "HRBP";
+         } else if (nextNode.data.assigneeStrategy === 'SPECIFIC_USER') {
+            assigneeId = "EMP-SPECIFIC-ID";
+         } else if (nextNode.data.assigneeStrategy === 'FORM_VARIABLE') {
+            // E.g., read formData['projectManagerId']
+            assigneeId = formData['approverId'] || null;
+         }
+
          await prisma.processTask.create({
             data: {
               instanceId: instance.id,
-              nodeId: String(nextNode.id),
-              nodeName: String(nextNode.data?.label || 'Approval Task'),
+              nodeId: nextNode.id,
+              nodeName: nextNode.data.label || 'Approval Task',
               taskType: 'APPROVAL',
-              status: 'WAITING'
+              assigneeId: assigneeId,
+              candidateGroup: candidateGroup,
+              status: 'PENDING'
             }
          });
       }
@@ -69,16 +93,22 @@ export async function POST(req: Request) {
     return NextResponse.json(instance);
 
   } catch {
-    return NextResponse.json({ error: "Failed to create instance" }, { status: 500 });
+    console.error("Failed to start process instance:", error);
+    return NextResponse.json({ error: "Failed to start process instance" }, { status: 500 });
   }
 }
 
-export async function GET() {
+// Get instances (e.g. for my tasks, or my initiated processes)
+export async function GET(req: Request) {
+   const { searchParams } = new URL(req.url);
+   const initiatorId = searchParams.get('initiatorId');
+
    try {
      const instances = await prisma.processInstance.findMany({
+       where: initiatorId ? { initiatorId } : {},
        include: {
          tasks: true,
-         version: { include: { definition: true } }
+         version: { select: { version: true, definition: { select: { name: true } } } }
        },
        orderBy: { startedAt: 'desc' }
      });
