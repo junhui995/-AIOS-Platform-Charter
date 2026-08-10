@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 工资条 & 培训管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;--brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;--orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;--purple:#7C3AED;--purple-light:#F3E8FF;--border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);--radius:20px;--radius-sm:12px;--radius-xs:8px}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;display:flex;align-items:center;gap:8px}.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}.nav-item .icon{font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}.topbar-title{font-size:20px;font-weight:700}.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-2px)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.card-header-title{font-size:15px;font-weight:700}.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}.stat-mini .val{font-size:18px;font-weight:700}.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}thead{background:var(--bg)}th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}td{padding:10px 16px;border-bottom:1px solid var(--border)}tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}.status-pending{background:var(--orange-light);color:var(--orange)}.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}.btn-primary:hover{background:#1D4ED8}.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}.btn-sm{padding:5px 14px;font-size:12px}
+.toolbar{display:flex;align-items:center;gap:8px}
+/* Payslip detail */
+.payslip{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;border:1px solid var(--border)}
+.payslip-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--text)}
+.payslip-header .title{font-size:18px;font-weight:700}
+.payslip-header .month{font-size:14px;color:var(--brand);font-weight:600}
+.payslip-row{display:flex;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.payslip-row .label{flex:1;color:var(--text2)}
+.payslip-row .value{font-weight:600}
+.payslip-row.income .value{color:var(--green)}
+.payslip-row.deduction .value{color:var(--red)}
+.payslip-row.total{border-bottom:2px solid var(--text);font-size:15px;font-weight:700}
+.payslip-row.total .value{color:var(--brand)}
+.payslip-section{margin-bottom:16px}
+.payslip-section-title{font-size:12px;font-weight:600;color:var(--text3);padding:4px 0;margin-bottom:8px;border-bottom:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group"><div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div><div class="nav-item"><span class="icon">👤</span>人员中心</div><div class="nav-item"><span class="icon">📌</span>岗位管理</div><div class="nav-item"><span class="icon">📅</span>考勤管理</div><div class="nav-item"><span class="icon">🏆</span>绩效管理</div><div class="nav-item"><span class="icon">💰</span>工资计算</div>
+    <div class="nav-item active"><span class="icon">🧾</span>工资条 & 培训</div><div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-label">合同模块</div><div class="nav-item"><span class="icon">📑</span>合同首页</div><div class="nav-item"><span class="icon">📋</span>合同台账</div></div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left"><div class="topbar-title">工资条 & 培训管理</div><div class="topbar-subtitle">应发扣减明细 · 移动端确认申诉 · 培训档案联动</div></div>
+    <div class="topbar-right"><div class="avatar">王</div></div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--green)">✅</div><div><div class="val">72</div><div class="label">已确认工资条</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--orange)">⏳</div><div><div class="val">14</div><div class="label">待确认</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--red)">⚠️</div><div><div class="val">2</div><div class="label">申诉中</div></div></div>
+      <div class="stat-mini"><div class="icon-circle" style="background:var(--purple)">📚</div><div><div class="val">8</div><div class="label">培训项目</div></div></div>
+    </div>
+
+    <!-- Payslip Detail -->
+    <div style="display:flex;gap:20px">
+      <div style="flex:1">
+        <div class="payslip">
+          <div class="payslip-header">
+            <div class="title">2026年7月 工资条</div>
+            <div class="month">员工：陈建国 · EMP-001</div>
+          </div>
+
+          <div class="payslip-section">
+            <div class="payslip-section-title">【应发项目】</div>
+            <div class="payslip-row income"><span class="label">基本工资</span><span class="value">¥18,000</span></div>
+            <div class="payslip-row income"><span class="label">绩效工资（系数1.20 × ¥3,000）</span><span class="value">¥3,600</span></div>
+            <div class="payslip-row income"><span class="label">岗位津贴</span><span class="value">¥1,000</span></div>
+            <div class="payslip-row income"><span class="label">交通补贴</span><span class="value">¥500</span></div>
+            <div class="payslip-row income"><span class="label">餐饮补贴</span><span class="value">¥300</span></div>
+            <div class="payslip-row total"><span class="label">应发合计</span><span class="value">¥23,400</span></div>
+          </div>
+
+          <div class="payslip-section">
+            <div class="payslip-section-title">【扣减项目】</div>
+            <div class="payslip-row deduction"><span class="label">养老保险（8%）</span><span class="value">¥-1,440</span></div>
+            <div class="payslip-row deduction"><span class="label">医疗保险（2%）</span><span class="value">¥-360</span></div>
+            <div class="payslip-row deduction"><span class="label">失业保险（0.5%）</span><span class="value">¥-90</span></div>
+            <div class="payslip-row deduction"><span class="label">住房公积金（12%）</span><span class="value">¥-2,160</span></div>
+            <div class="payslip-row deduction"><span class="label">个人所得税</span><span class="value">¥-1,260</span></div>
+            <div class="payslip-row deduction"><span class="label">考勤异常扣减</span><span class="value">¥-0</span></div>
+            <div class="payslip-row total"><span class="label">扣减合计</span><span class="value" style="color:var(--red)">¥-5,310</span></div>
+          </div>
+
+          <div class="payslip-section">
+            <div class="payslip-section-title" style="font-size:14px;color:var(--text);border-bottom:2px solid var(--text)">【实发金额】</div>
+            <div class="payslip-row total" style="font-size:18px"><span class="label">实发合计</span><span class="value" style="color:var(--green)">¥18,090</span></div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <button class="btn btn-primary">✅ 确认无误</button>
+            <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)">⚠️ 存疑申诉</button>
+            <button class="btn btn-outline">📱 下载PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Training -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">培训管理 <span class="count">8项目</span></div><button class="btn btn-sm btn-primary">+ 新增培训</button></div>
+          <div class="card-body" style="padding:0">
+            <table>
+              <thead><tr><th>培训编号</th><th>培训名称</th><th>类型</th><th>参训人数</th><th>完成状态</th><th>关联人员</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td>TRN-001</td><td style="font-weight:600">安全生产规范培训</td><td>必修</td><td>42</td><td><span class="status-pill status-active">100%完成</span></td><td style="font-size:12px;color:var(--text3)">工程管理部全员</td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+                <tr><td>TRN-002</td><td style="font-weight:600">项目管理PMP认证</td><td>选修</td><td>5</td><td><span class="status-pill status-pending">60%进行中</span></td><td style="font-size:12px;color:var(--text3)">陈建国等5人</td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+                <tr><td>TRN-003</td><td style="font-weight:600">销售技巧提升</td><td>必修</td><td>12</td><td><span class="status-pill status-pending">8月开课</span></td><td style="font-size:12px;color:var(--text3)">市场营销部全员</td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+                <tr><td>TRN-004</td><td style="font-weight:600">OA系统操作培训</td><td>必修</td><td>86</td><td><span class="status-pill status-active">100%完成</span></td><td style="font-size:12px;color:var(--text3)">全员</td><td><button class="btn btn-sm btn-outline">查看</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Skill Tree -->
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">员工技能树 · 陈建国</div></div>
+          <div class="card-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;color:var(--green)">✅ 安全生产A级</div>
+              <div style="background:var(--brand-light);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;color:var(--brand)">✅ 项目管理PMP</div>
+              <div style="background:var(--purple-light);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;color:var(--purple)">✅ BIM建模中级</div>
+              <div style="background:var(--orange-light);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;color:var(--orange)">⏳ 质量检测资质</div>
+              <div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text3)">+ 添加技能</div>
+            </div>
+            <div style="margin-top:12px;font-size:12px;color:var(--text3)">培训记录已纳入员工档案，绑定人才技能树，支持晋升评审参考。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
