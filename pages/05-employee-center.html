@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华复保利工作台 · 人员中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F5F7;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#AEAEB2;
+  --brand:#2563EB;--brand-light:#EBF0FF;--green:#059669;--green-light:#E6F9EE;
+  --orange:#F59E0B;--orange-light:#FEF6E7;--red:#DC2626;--red-light:#FEE2E2;
+  --purple:#7C3AED;--purple-light:#F3E8FF;
+  --border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);
+  --radius:20px;--radius-sm:12px;--radius-xs:8px;
+}
+body{font-family:-apple-system,'PingFang SC','Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.sidebar-logo{font-size:15px;font-weight:700;padding:0 12px 20px;color:var(--text);display:flex;align-items:center;gap:8px}
+.sidebar-logo .dot{width:8px;height:8px;background:var(--brand);border-radius:50%}
+.nav-group{margin-bottom:16px}
+.nav-group-label{font-size:11px;color:var(--text3);padding:4px 12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-xs);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:600}
+.nav-item .icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-title{font-size:20px;font-weight:700}
+.topbar-subtitle{font-size:12px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--brand),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600}
+.search-pill{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--text2)}
+.content{flex:1;padding:24px 32px;overflow-y:auto;display:flex;gap:24px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+.card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-header-title{font-size:15px;font-weight:700}
+.card-header-title .count{color:var(--text3);font-size:12px;margin-left:8px}
+.card-body{padding:16px 20px}
+.stat-mini{background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer;flex:1;min-width:140px}
+.stat-mini:hover{transform:scale(1.03)}
+.stat-mini .icon-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}
+.stat-mini .val{font-size:18px;font-weight:700}
+.stat-mini .label{font-size:11px;color:var(--text3)}
+.stats-row{display:flex;gap:12px}
+.pill-tabs{display:flex;gap:0;background:var(--bg);border-radius:99px;padding:4px;margin-bottom:16px}
+.pill-tab{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2)}
+.pill-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--bg)}
+th{padding:10px 16px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;border-bottom:1px solid var(--border)}
+td{padding:10px 16px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--brand-light)}
+.status-pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-active{background:var(--green-light);color:var(--green)}
+.status-pending{background:var(--orange-light);color:var(--orange)}
+.status-inactive{background:var(--red-light);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--brand);color:white}
+.btn-primary:hover{background:#1D4ED8;transform:scale(1.03)}
+.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{background:var(--bg)}
+.btn-sm{padding:5px 14px;font-size:12px}
+.btn-danger{background:var(--red);color:white}
+.btn-success{background:var(--green);color:white}
+.toolbar{display:flex;align-items:center;gap:8px}
+.employee-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white}
+.checkbox-col{width:32px;text-align:center}
+.checkbox{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.checkbox.checked{background:var(--brand);border-color:var(--brand);color:white;font-size:10px}
+/* Batch action bar */
+.batch-bar{display:none;background:var(--brand-light);border-radius:var(--radius-sm);padding:10px 20px;margin-bottom:12px;align-items:center;gap:12px;font-size:13px}
+.batch-bar.show{display:flex}
+.batch-bar .count-badge{background:var(--brand);color:white;padding:2px 10px;border-radius:99px;font-weight:600;font-size:12px}
+/* Person detail card */
+.person-detail{display:flex;gap:20px;padding:20px}
+.person-photo{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--purple));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:white}
+.person-info{flex:1}
+.person-info .name{font-size:18px;font-weight:700;margin-bottom:2px}
+.person-info .role{font-size:13px;color:var(--text2)}
+.info-grid{display:flex;gap:16px;margin-top:12px}
+.info-item{flex:1}
+.info-item .label{font-size:11px;color:var(--text3);margin-bottom:2px}
+.info-item .value{font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span>华复保利</div>
+  <div class="nav-group">
+    <div class="nav-group-label">人事模块</div>
+    <div class="nav-item"><span class="icon">🏛️</span>组织中心</div>
+    <div class="nav-item active"><span class="icon">👤</span>人员中心</div>
+    <div class="nav-item"><span class="icon">📌</span>岗位管理</div>
+    <div class="nav-item"><span class="icon">📅</span>考勤管理</div>
+    <div class="nav-item"><span class="icon">🏆</span>绩效管理</div>
+    <div class="nav-item"><span class="icon">💰</span>工资计算</div>
+    <div class="nav-item"><span class="icon">🧾</span>工资条</div>
+    <div class="nav-item"><span class="icon">📊</span>数据报表</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">合同模块</div>
+    <div class="nav-item"><span class="icon">📑</span>合同首页</div>
+    <div class="nav-item"><span class="icon">📋</span>合同台账</div>
+    <div class="nav-item"><span class="icon">💳</span>收付款</div>
+    <div class="nav-item"><span class="icon">🧾</span>发票中心</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">人员中心</div>
+      <div class="topbar-subtitle">全量档案 · 批量操作 · 异动管理</div>
+    </div>
+    <div class="topbar-right">
+      <div class="search-pill">🔍 搜索姓名/编号/岗位</div>
+      <div class="avatar">王</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div style="flex:1;display:flex;flex-direction:column;gap:20px">
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--brand)">👤</div>
+          <div><div class="val">86</div><div class="label">在职人数</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--green)">➡️</div>
+          <div><div class="val">3</div><div class="label">本月入职</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--red)">⬅️</div>
+          <div><div class="val">1</div><div class="label">本月离职</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--orange)">⏳</div>
+          <div><div class="val">5</div><div class="label">试用期中</div></div>
+        </div>
+        <div class="stat-mini">
+          <div class="icon-circle" style="background:var(--purple)">🔄</div>
+          <div><div class="val">2</div><div class="label">调岗审批中</div></div>
+        </div>
+      </div>
+
+      <!-- Batch Action Bar -->
+      <div class="batch-bar show">
+        已勾选 <span class="count-badge">3</span> 人
+        <button class="btn btn-sm btn-success">批量转正</button>
+        <button class="btn btn-sm btn-primary">批量调岗</button>
+        <button class="btn btn-sm btn-outline">批量调薪</button>
+        <button class="btn btn-sm btn-danger">批量离职</button>
+        <button class="btn btn-sm btn-outline" style="margin-left:auto">取消选择</button>
+      </div>
+
+      <!-- Employee Table -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <div class="card-header-title">人员档案 <span class="count">86人</span></div>
+          <div class="toolbar">
+            <div class="pill-tabs" style="margin-bottom:0">
+              <div class="pill-tab active">全部</div>
+              <div class="pill-tab">在职</div>
+              <div class="pill-tab">试用期</div>
+              <div class="pill-tab">离职</div>
+            </div>
+            <button class="btn btn-sm btn-primary">+ 新增人员</button>
+            <button class="btn btn-sm btn-outline">导出</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th class="checkbox-col"><div class="checkbox checked">✓</div></th>
+                  <th>员工编号</th>
+                  <th>姓名</th>
+                  <th>部门</th>
+                  <th>岗位</th>
+                  <th>职级</th>
+                  <th>入职日期</th>
+                  <th>合同到期</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox checked">✓</div></td>
+                  <td>EMP-001</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#2563EB,#7C3AED)">陈</div>陈建国</div></td>
+                  <td>工程管理部</td>
+                  <td>项目经理</td>
+                  <td>P6</td>
+                  <td>2024-03-15</td>
+                  <td>2028-03-14</td>
+                  <td><span class="status-pill status-active">在职</span></td>
+                  <td><button class="btn btn-sm btn-outline">档案</button></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox checked">✓</div></td>
+                  <td>EMP-002</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#059669,#10B981)">王</div>王亚</div></td>
+                  <td>综合行政部</td>
+                  <td>行政主管</td>
+                  <td>P5</td>
+                  <td>2025-01-10</td>
+                  <td>2028-01-09</td>
+                  <td><span class="status-pill status-active">在职</span></td>
+                  <td><button class="btn btn-sm btn-outline">档案</button></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox checked">✓</div></td>
+                  <td>EMP-003</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#F59E0B,#D97706)">张</div>张明</div></td>
+                  <td>市场营销部</td>
+                  <td>销售经理</td>
+                  <td>P5</td>
+                  <td>2026-06-01</td>
+                  <td>2028-05-31</td>
+                  <td><span class="status-pill status-pending">试用期</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-success">转正</button>
+                    <button class="btn btn-sm btn-outline">档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox"></div></td>
+                  <td>EMP-004</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#DC2626,#EF4444)">李</div>李华</div></td>
+                  <td>质量安全部</td>
+                  <td>质量监督员</td>
+                  <td>P3</td>
+                  <td>2026-07-01</td>
+                  <td>2028-06-30</td>
+                  <td><span class="status-pill status-pending">试用期</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-success">转正</button>
+                    <button class="btn btn-sm btn-outline">档案</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox"></div></td>
+                  <td>EMP-005</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#2563EB,#60A5FA)">刘</div>刘伟</div></td>
+                  <td>工程管理部</td>
+                  <td>施工工程师</td>
+                  <td>P4</td>
+                  <td>2023-08-20</td>
+                  <td>2027-08-19</td>
+                  <td><span class="status-pill status-active">在职</span></td>
+                  <td><button class="btn btn-sm btn-outline">档案</button></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-col"><div class="checkbox"></div></td>
+                  <td>EMP-006</td>
+                  <td style="font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div class="employee-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA)">周</div>周芳</div></td>
+                  <td>综合行政部</td>
+                  <td>行政专员</td>
+                  <td>P2</td>
+                  <td>2025-05-15</td>
+                  <td>2027-05-14</td>
+                  <td><span class="status-pill status-active">在职</span></td>
+                  <td><button class="btn btn-sm btn-outline">档案</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee Detail Preview -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-title">员工档案详情 · 陈建国</div>
+          <div class="toolbar">
+            <button class="btn btn-sm btn-outline">编辑</button>
+            <button class="btn btn-sm btn-primary">发起异动</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="person-detail">
+            <div class="person-photo">陈</div>
+            <div class="person-info">
+              <div class="name">陈建国</div>
+              <div class="role">项目经理 · 工程管理部 · P6(高级)</div>
+              <div class="info-grid">
+                <div class="info-item"><div class="label">员工编号</div><div class="value">EMP-001</div></div>
+                <div class="info-item"><div class="label">入职日期</div><div class="value">2024-03-15</div></div>
+                <div class="info-item"><div class="label">合同到期</div><div class="value">2028-03-14</div></div>
+                <div class="info-item"><div class="label">手机号</div><div class="value">138****6789</div></div>
+                <div class="info-item"><div class="label">学历</div><div class="value">本科 · 土木工程</div></div>
+                <div class="info-item"><div class="label">工资标准</div><div class="value">¥18,000</div></div>
+                <div class="info-item"><div class="label">系统角色</div><div class="value">工程管理角色</div></div>
+                <div class="info-item"><div class="label">数据权限</div><div class="value">工程管理部+项目组</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
