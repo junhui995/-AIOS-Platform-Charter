@@ -32,11 +32,7 @@ export default function AttendancePage() {
   const runEngine = async () => {
     setAnalyzing(true);
     try {
-<<<<<<< HEAD
       const res = await fetch('/api/hr/attendance/analyze', {
-=======
-      const res = await fetch('/api/hr/attendance/analyze', {
->>>>>>> 1fbe173 (chore: fix build scripts to generate prisma client correctly and adjust attendance routing)
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetDate: new Date().toISOString() })
       });
       if (res.ok) fetchRecords();
@@ -57,11 +53,7 @@ export default function AttendancePage() {
             <Calendar className="w-4 h-4" />
             排班方案管理
           </button>
-<<<<<<< HEAD
           <button
-=======
-          <button
->>>>>>> 1fbe173 (chore: fix build scripts to generate prisma client correctly and adjust attendance routing)
             onClick={runEngine}
             disabled={analyzing}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
@@ -76,11 +68,6 @@ export default function AttendancePage() {
         <div className="p-4 border-b border-gray-100 bg-gray-50 font-medium text-gray-700">
           今日出勤状态 (Daily Attendance Results)
         </div>
-<<<<<<< HEAD
-
-=======
-
->>>>>>> 1fbe173 (chore: fix build scripts to generate prisma client correctly and adjust attendance routing)
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-white border-b border-gray-100">
@@ -104,7 +91,6 @@ export default function AttendancePage() {
                 records.map((r, idx) => {
                   const emp = r.employee;
                   const primaryPos = emp?.positions?.find(p => p.isPrimary)?.position;
-<<<<<<< HEAD
 
                   return (
                     <motion.tr
@@ -112,15 +98,6 @@ export default function AttendancePage() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: idx * 0.05 }}
                       key={r.id}
-=======
-
-                  return (
-                    <motion.tr
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.05 }}
-                      key={r.id}
->>>>>>> 1fbe173 (chore: fix build scripts to generate prisma client correctly and adjust attendance routing)
                       className="hover:bg-blue-50/50 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-gray-900">{emp?.name || '未知员工'}</td>
