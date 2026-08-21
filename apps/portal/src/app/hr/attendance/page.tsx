@@ -68,7 +68,6 @@ export default function AttendancePage() {
         <div className="p-4 border-b border-gray-100 bg-gray-50 font-medium text-gray-700">
           今日出勤状态 (Daily Attendance Results)
         </div>
-
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-white border-b border-gray-100">
