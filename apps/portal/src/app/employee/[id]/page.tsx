@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { User, Activity, Clock, Briefcase, FileText, ArrowLeft, ArrowRightLeft, UserX, UserCheck, PlusCircle } from 'lucide-react';
+import { User, Activity, Briefcase, FileText, ArrowLeft, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EmployeeLifecyclePage() {
@@ -15,9 +15,9 @@ export default function EmployeeLifecyclePage() {
 
    useEffect(() => {
        Promise.all([
-           fetch(\`/api/employee\`).then(r => r.json()),
-           fetch(\`/api/employee/\${params.id}/lifecycle\`).then(r => r.json()),
-           fetch(\`/api/hr/contracts?employeeId=\${params.id}\`).then(r => r.json())
+           fetch(`/api/employee`).then(r => r.json()),
+           fetch(`/api/employee/${params.id}/lifecycle`).then(r => r.json()),
+           fetch(`/api/hr/contracts?employeeId=${params.id}`).then(r => r.json())
        ]).then(([emps, evts, cts]) => {
            const emp = Array.isArray(emps) ? emps.find((e:any) => e.id === params.id) : emps;
            setEmployee(emp);
@@ -114,7 +114,7 @@ export default function EmployeeLifecyclePage() {
                          </h3>
                          <div className="relative border-l-2 border-gray-200 ml-4 space-y-8">
                              {events.length === 0 ? <p className="text-gray-400 pl-6">暂无生命周期记录。</p> : null}
-                             {events.map((ev, i) => (
+                             {events.map((ev) => (
                                 <div key={ev.id} className="relative pl-6">
                                     <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white bg-blue-500"></div>
                                     <div className="text-sm font-bold text-gray-900 mb-1">{ev.eventType} <span className="text-xs font-normal text-gray-400 ml-2">{new Date(ev.eventDate).toLocaleString()}</span></div>
