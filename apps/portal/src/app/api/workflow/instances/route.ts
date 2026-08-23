@@ -1,6 +1,48 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
+
+// --- Type Definitions ---
+interface WorkflowNodeData {
+    label?: string;
+    assigneeStrategy?: string;
+    [key: string]: unknown;
+}
+
+interface WorkflowNode {
+    id: string;
+    type?: string;
+    data?: WorkflowNodeData;
+    [key: string]: unknown;
+}
+
+interface WorkflowEdge {
+    id: string;
+    source: string;
+    target: string;
+    [key: string]: unknown;
+}
+
+// --- Type Guards ---
+function isWorkflowNodeArray(value: unknown): value is WorkflowNode[] {
+    if (!Array.isArray(value)) return false;
+    return value.every(item =>
+        item !== null &&
+        typeof item === 'object' &&
+        'id' in item &&
+        typeof (item as Record<string, unknown>).id === 'string'
+    );
+}
+
+function isWorkflowEdgeArray(value: unknown): value is WorkflowEdge[] {
+    if (!Array.isArray(value)) return false;
+    return value.every(item =>
+        item !== null &&
+        typeof item === 'object' &&
+        'id' in item && typeof (item as Record<string, unknown>).id === 'string' &&
+        'source' in item && typeof (item as Record<string, unknown>).source === 'string' &&
+        'target' in item && typeof (item as Record<string, unknown>).target === 'string'
+    );
+}
 
 export async function POST(req: Request) {
   try {
@@ -16,23 +58,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No published version found for this workflow definition" }, { status: 400 });
     }
 
-    const latestVersion = version;
-    const nodes = latestVersion.nodes as unknown[];
-    const edges = latestVersion.edges as unknown[];
+    const rawNodes = version.nodes;
+    const rawEdges = version.edges;
+
+    if (!isWorkflowNodeArray(rawNodes)) {
+        return NextResponse.json({ error: "Invalid workflow nodes format" }, { status: 400 });
+    }
+
+    if (!isWorkflowEdgeArray(rawEdges)) {
+        return NextResponse.json({ error: "Invalid workflow edges format" }, { status: 400 });
+    }
+
+    const nodes: WorkflowNode[] = rawNodes;
+    const edges: WorkflowEdge[] = rawEdges;
 
     // Find start node
-    const startNode = nodes.find((n: any) => n.type === 'input');
+    const startNode = nodes.find((n) => n.type === 'input');
     if (!startNode) return NextResponse.json({ error: "No start node defined" }, { status: 400 });
 
-    const firstEdge = edges.find((e: any) => e.source === (startNode as any).id);
+    const firstEdge = edges.find((e) => e.source === startNode.id);
     const initialCurrentNodes: string[] = [];
     if (firstEdge) {
-      initialCurrentNodes.push((firstEdge as any).target);
+      initialCurrentNodes.push(firstEdge.target);
     }
 
     const instance = await prisma.processInstance.create({
       data: {
-        versionId: latestVersion.id,
+        versionId: version.id,
         initiatorId: initiatorId,
         formData: formData || {},
         currentNodes: initialCurrentNodes,
@@ -50,27 +102,31 @@ export async function POST(req: Request) {
     });
 
     if (firstEdge) {
-      const nextNode = nodes.find((n: any) => n.id === (firstEdge as any).target);
-      if (nextNode && (nextNode as any).type !== 'output' && !(nextNode as any).id.startsWith('gateway')) {
-         let assigneeId = null;
-         let candidateGroup = null;
+      const nextNode = nodes.find((n) => n.id === firstEdge.target);
+      if (nextNode && nextNode.type !== 'output' && !nextNode.id.startsWith('gateway')) {
+         let assigneeId: string | null = null;
+         let candidateGroup: string | null = null;
+         const nodeData = nextNode.data || {};
 
-         if ((nextNode as any).data.assigneeStrategy === 'DIRECT_MANAGER') {
+         if (nodeData.assigneeStrategy === 'DIRECT_MANAGER') {
             candidateGroup = "MANAGER_ROLE";
-         } else if ((nextNode as any).data.assigneeStrategy === 'SPECIFIC_ROLE') {
+         } else if (nodeData.assigneeStrategy === 'SPECIFIC_ROLE') {
             candidateGroup = "HRBP";
-         } else if ((nextNode as any).data.assigneeStrategy === 'SPECIFIC_USER') {
+         } else if (nodeData.assigneeStrategy === 'SPECIFIC_USER') {
+            // [PLACEHOLDER] Target for future specific employee resolution query
             assigneeId = "EMP-SPECIFIC-ID";
-         } else if ((nextNode as any).data.assigneeStrategy === 'FORM_VARIABLE') {
+         } else if (nodeData.assigneeStrategy === 'FORM_VARIABLE') {
             const typedFormData = formData as Record<string, unknown>;
-            assigneeId = (typedFormData['approverId'] as string) || null;
+            if (typedFormData && typeof typedFormData['approverId'] === 'string') {
+               assigneeId = typedFormData['approverId'];
+            }
          }
 
          await prisma.processTask.create({
             data: {
               instanceId: instance.id,
-              nodeId: (nextNode as any).id,
-              nodeName: (nextNode as any).data.label || 'Approval Task',
+              nodeId: nextNode.id,
+              nodeName: nodeData.label || 'Approval Task',
               taskType: 'APPROVAL',
               assigneeId: assigneeId,
               candidateGroup: candidateGroup,
