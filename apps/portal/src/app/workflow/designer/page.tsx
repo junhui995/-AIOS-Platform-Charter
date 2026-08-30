@@ -159,7 +159,7 @@ export default function WorkflowDesignerPage() {
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 max-w-[200px]"
           >
              <option value="">未绑定表单</option>
-             {availableForms.map(f => (
+             {availableForms.map((f: any) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
              ))}
           </select>
