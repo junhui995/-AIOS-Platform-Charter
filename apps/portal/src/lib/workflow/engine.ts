@@ -168,4 +168,54 @@ export class WorkflowEngine {
             }
         }
     }
+
+
+    // --- Get pending tasks (replacing raw prisma call in api) ---
+    static async getTasks(assigneeId?: string | null) {
+        return await prisma.processTask.findMany({
+            where: assigneeId ? { assigneeId, status: 'PENDING' } : { status: 'PENDING' },
+            include: {
+                instance: {
+                    select: {
+                        formData: true,
+                        initiatorId: true,
+                        version: {
+                            select: {
+                                definition: { select: { name: true } }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    // --- Get instances (replacing raw prisma call in api) ---
+    static async getInstances(initiatorId?: string | null) {
+        return await prisma.processInstance.findMany({
+            where: initiatorId ? { initiatorId } : {},
+            include: {
+                tasks: true,
+                version: { select: { version: true, definition: { select: { name: true } } } }
+            },
+            orderBy: { startedAt: 'desc' }
+        });
+    }
+
+    // --- Retro Execute ---
+    static async retroExecute(_instanceId: string) {
+        console.log(_instanceId);
+        // [PLACEHOLDER] Stub for backwards compatibility mapping
+        // In a real system, this resets activeNodeIds and forces advance()
+        throw new Error("Retro execution not yet fully implemented in new WorkflowEngine");
+    }
+
+    // --- Simulate ---
+    static async simulate(_definitionId: string, _formData: Record<string, unknown>) {
+        console.log(_definitionId, _formData);
+        // [PLACEHOLDER] Stub for backwards compatibility mapping
+        // Dry run mode mapping path logic
+        throw new Error("Simulation not yet fully implemented in new WorkflowEngine");
+    }
 }

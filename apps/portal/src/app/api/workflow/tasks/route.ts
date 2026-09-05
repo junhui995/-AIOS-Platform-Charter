@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@aios/data-service';
 import { WorkflowEngine } from '@/lib/workflow/engine';
 
 // Advance a task
@@ -32,13 +31,7 @@ export async function GET(req: Request) {
    const assigneeId = searchParams.get('assigneeId');
 
    try {
-     const tasks = await prisma.processTask.findMany({
-       where: assigneeId ? { assigneeId, status: 'PENDING' } : { status: 'PENDING' },
-       include: {
-         instance: { select: { formData: true, initiatorId: true, version: { select: { definition: { select: { name: true } } } } } }
-       },
-       orderBy: { createdAt: 'desc' }
-     });
+     const tasks = await WorkflowEngine.getTasks(assigneeId);
      return NextResponse.json(tasks);
    } catch {
      return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
