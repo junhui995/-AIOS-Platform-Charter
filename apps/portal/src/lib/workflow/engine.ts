@@ -1,6 +1,6 @@
+import { NodeExecutorRegistry } from './executors';
 import { prisma } from '@aios/data-service';
 import { WorkflowContext, WorkflowNode, WorkflowEdge } from './types';
-import { NodeExecutorRegistry } from './executors';
 import { WorkflowRouter } from './router';
 
 export class WorkflowEngine {
@@ -118,7 +118,7 @@ export class WorkflowEngine {
         await this.advance(task.instanceId, task.nodeId, nodes, edges);
     }
 
-    // --- Internal Engine Loop ---
+        // --- Internal Engine Loop ---
     private static async advance(
         instanceId: string,
         currentNodeId: string,
@@ -148,6 +148,8 @@ export class WorkflowEngine {
 
                 const node = nodes.find(n => n.id === nodeId);
                 if (!node) continue;
+
+                // Load the executor from the registry dynamically based on the node Type
 
                 const executor = NodeExecutorRegistry.getExecutor(node);
                 const result = await executor.execute(node, context);
@@ -253,35 +255,60 @@ export class WorkflowEngine {
         const startNode = nodes.find(n => n.type === 'input');
         if (!startNode) throw new Error("No start node defined");
 
-        const simulatedPath: string[] = [];
-        let currentNodeId: string | undefined = startNode.id;
+        const executionTrace: Record<string, string | undefined>[] = [];
+        let activeNodeIds = [startNode.id];
 
-        // Traverse using routing logic without side effects
-        while (currentNodeId) {
-            simulatedPath.push(currentNodeId);
+        // Traverse using same execution logic but isolating Prisma DB writes into a virtual array
+        while (activeNodeIds.length > 0) {
+            const nextIterationNodes: string[] = [];
 
-            const context: WorkflowContext = {
-                instanceId: 'SIMULATED',
-                definitionId: 'SIMULATED',
-                versionId: version.id,
-                initiatorId: 'SIMULATED',
-                formData: formData,
-                variables: {},
-                currentNodeId: currentNodeId,
-                nodes,
-                edges
-            };
+            for (const nodeId of activeNodeIds) {
+                const node = nodes.find(n => n.id === nodeId);
+                if (!node) continue;
 
-            const nextNodes = WorkflowRouter.route(context);
+                executionTrace.push({ nodeId: node.id, actionType: 'NODE_ENTERED', type: node.type });
 
-            if (nextNodes && nextNodes.length > 0) {
-                // Follow the first path for simple linear simulation
-                currentNodeId = nextNodes[0];
-            } else {
-                currentNodeId = undefined;
+                const context: WorkflowContext = {
+                    instanceId: 'SIMULATED',
+                    definitionId: 'SIMULATED',
+                    versionId: version.id,
+                    initiatorId: 'SIMULATED',
+                    formData: formData,
+                    variables: {},
+                    currentNodeId: nodeId,
+                    nodes,
+                    edges
+                };
+
+
+                // We fake the execution by bypassing the actual Prisma-heavy DB modifications
+                // Instead of calling .execute(), we simulate the Router logic directly for Dry-Run
+                if (node.type === 'input') {
+                    const nextNodes = WorkflowRouter.route(context);
+                    if (nextNodes.length > 0) nextIterationNodes.push(...nextNodes);
+                } else if (node.type === 'output') {
+                    executionTrace.push({ nodeId: node.id, actionType: 'INSTANCE_COMPLETED' });
+                } else if (node.type === 'gateway' || node.id.startsWith('gateway')) {
+                    const nextNodes = WorkflowRouter.route(context);
+                    executionTrace.push({ nodeId: node.id, actionType: 'GATEWAY_EVALUATED', details: `Evaluated to nodes: ${nextNodes.join(',')}` });
+                    if (nextNodes.length > 0) nextIterationNodes.push(...nextNodes);
+                } else if (node.type === 'service') {
+                    executionTrace.push({ nodeId: node.id, actionType: 'TOOL_CALLED' });
+                    const nextNodes = WorkflowRouter.route(context);
+                    if (nextNodes.length > 0) nextIterationNodes.push(...nextNodes);
+                } else {
+                    // Default User Task
+                    executionTrace.push({ nodeId: node.id, actionType: 'TASK_CREATED' });
+                    // To simulate flowing past a user task, we assume auto-approve
+                    executionTrace.push({ nodeId: node.id, actionType: 'TASK_COMPLETED' });
+                    const nextNodes = WorkflowRouter.route(context);
+                    if (nextNodes.length > 0) nextIterationNodes.push(...nextNodes);
+                }
             }
+
+            activeNodeIds = nextIterationNodes;
         }
 
-        return { simulatedPath };
+        return { executionTrace };
     }
 }
