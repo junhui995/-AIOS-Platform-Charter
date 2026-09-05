@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { WorkflowEngine } from '@/lib/workflow/engine';
+import { WorkflowEngine } from '@/lib/workflow/engine';
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        await WorkflowEngine.simulate(body.definitionId, body.formData);
-        return NextResponse.json({ success: true });
+        const result = await WorkflowEngine.simulate(body.definitionId, body.formData);
+        return NextResponse.json({ success: true, result });
     } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : "Failed to simulate workflow";
         return NextResponse.json({ error: msg }, { status: 400 });

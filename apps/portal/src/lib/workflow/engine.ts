@@ -1,6 +1,7 @@
 import { prisma } from '@aios/data-service';
 import { WorkflowContext, WorkflowNode, WorkflowEdge } from './types';
 import { NodeExecutorRegistry } from './executors';
+import { WorkflowRouter } from './router';
 
 export class WorkflowEngine {
 
@@ -204,18 +205,83 @@ export class WorkflowEngine {
     }
 
     // --- Retro Execute ---
-    static async retroExecute(_instanceId: string) {
-        console.log(_instanceId);
-        // [PLACEHOLDER] Stub for backwards compatibility mapping
-        // In a real system, this resets activeNodeIds and forces advance()
-        throw new Error("Retro execution not yet fully implemented in new WorkflowEngine");
+    static async retroExecute(instanceId: string) {
+        const instance = await prisma.processInstance.findUnique({
+            where: { id: instanceId },
+            include: { version: true }
+        });
+
+        if (!instance) throw new Error("Instance not found");
+        if (instance.status !== 'RUNNING' && instance.status !== 'ERROR') {
+             throw new Error("Can only retro execute a running or error workflow");
+        }
+
+        const nodes = instance.version.nodes as unknown as WorkflowNode[];
+        const edges = instance.version.edges as unknown as WorkflowEdge[];
+        const currentNodes = instance.currentNodes as string[];
+
+        if (!currentNodes || currentNodes.length === 0) {
+             throw new Error("No active nodes to retro execute from");
+        }
+
+        await prisma.processLog.create({
+            data: {
+                instanceId: instance.id,
+                actionType: 'RETRO_EXECUTE',
+                operatorId: 'SYSTEM',
+                details: 'Retro executed workflow from current active nodes'
+            }
+        });
+
+        // Resume engine loop from current active nodes
+        // (Normally we would need more complicated logic for parallel paths, but loop handles sequential)
+        await this.advance(instance.id, currentNodes[0], nodes, edges);
     }
 
     // --- Simulate ---
-    static async simulate(_definitionId: string, _formData: Record<string, unknown>) {
-        console.log(_definitionId, _formData);
-        // [PLACEHOLDER] Stub for backwards compatibility mapping
-        // Dry run mode mapping path logic
-        throw new Error("Simulation not yet fully implemented in new WorkflowEngine");
+    static async simulate(definitionId: string, formData: Record<string, unknown>) {
+        const version = await prisma.workflowVersion.findFirst({
+            where: { definitionId: definitionId, isPublished: true },
+            orderBy: { version: 'desc' }
+        });
+
+        if (!version) throw new Error("No published version found for this workflow definition");
+
+        const nodes = version.nodes as unknown as WorkflowNode[];
+        const edges = version.edges as unknown as WorkflowEdge[];
+
+        const startNode = nodes.find(n => n.type === 'input');
+        if (!startNode) throw new Error("No start node defined");
+
+        const simulatedPath: string[] = [];
+        let currentNodeId: string | undefined = startNode.id;
+
+        // Traverse using routing logic without side effects
+        while (currentNodeId) {
+            simulatedPath.push(currentNodeId);
+
+            const context: WorkflowContext = {
+                instanceId: 'SIMULATED',
+                definitionId: 'SIMULATED',
+                versionId: version.id,
+                initiatorId: 'SIMULATED',
+                formData: formData,
+                variables: {},
+                currentNodeId: currentNodeId,
+                nodes,
+                edges
+            };
+
+            const nextNodes = WorkflowRouter.route(context);
+
+            if (nextNodes && nextNodes.length > 0) {
+                // Follow the first path for simple linear simulation
+                currentNodeId = nextNodes[0];
+            } else {
+                currentNodeId = undefined;
+            }
+        }
+
+        return { simulatedPath };
     }
 }
