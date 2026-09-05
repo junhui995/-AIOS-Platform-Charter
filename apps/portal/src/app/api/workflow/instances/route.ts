@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@aios/data-service';
 import { WorkflowEngine } from '@/lib/workflow/engine';
 
 export async function POST(req: Request) {
@@ -21,41 +20,13 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const initiatorId = searchParams.get('initiatorId');
+   const { searchParams } = new URL(req.url);
+   const initiatorId = searchParams.get('initiatorId');
 
-  try {
-    const instances = await prisma.processInstance.findMany({
-      where: initiatorId ? { initiatorId } : {},
-      include: {
-        tasks: true,
-        version: {
-          select: {
-            version: true,
-            definition: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      },
-      orderBy: {
-        startedAt: 'desc'
-      }
-    });
-
-    return NextResponse.json(instances);
-
-  } catch (error) {
-    console.error(
-      'Failed to fetch instances:',
-      error
-    );
-
-    return NextResponse.json(
-      { error: 'Failed to fetch instances' },
-      { status: 500 }
-    );
-  }
+   try {
+     const instances = await WorkflowEngine.getInstances(initiatorId);
+     return NextResponse.json(instances);
+   } catch {
+     return NextResponse.json({ error: "Failed to fetch instances" }, { status: 500 });
+   }
 }
