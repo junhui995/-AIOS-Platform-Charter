@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { User, Activity, Briefcase, FileText, ArrowLeft, ArrowRightLeft, PlusCircle } from 'lucide-react';
+import { User, Activity, Briefcase, FileText, ArrowLeft, ArrowRightLeft, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EmployeeLifecyclePage() {
