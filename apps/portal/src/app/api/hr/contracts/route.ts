@@ -32,14 +32,9 @@ export async function POST(req: Request) {
           code: 'HT' + Date.now(),
           employeeId,
           templateId,
-          contractType: contractType || 'FIXED_TERM',
+          signDate: new Date(startDate),
           startDate: new Date(startDate),
           endDate: new Date(endDate),
-          probationMonths: Number(probationMonths) || 0,
-          salary,
-          position,
-          department,
-          remark,
           status: 'DRAFT'
        }
     });
