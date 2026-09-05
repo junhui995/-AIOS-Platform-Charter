@@ -14,4 +14,16 @@ export async function POST(req: Request) {
 
 export async function GET() {
     return NextResponse.json([]);
+    try {
+        const body = await req.json();
+        const result = await WorkflowEngine.simulate(body.definitionId, body.formData);
+        return NextResponse.json({ success: true, result });
+    } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Failed to simulate workflow";
+        return NextResponse.json({ error: msg }, { status: 400 });
+    }
+}
+
+export async function GET() {
+    return NextResponse.json([]);
 }
