@@ -19,7 +19,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         }
         await prisma.laborContract.update({
             where: { id: contractId },
-            data: { status: 'ACTIVE', signDate: new Date(), effectiveDate: new Date() }
+            data: { status: 'ACTIVE', signDate: new Date() }
         });
     } else if (actionType === 'RENEW') {
         if (contract.status !== 'ACTIVE' && contract.status !== 'EXPIRED') {
@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             // End old contract
             await tx.laborContract.update({
                 where: { id: contractId },
-                data: { status: 'TERMINATED', remark: (contract.remark || '') + ' [Renewed]' }
+                data: { status: 'TERMINATED' }
             });
             // Create new contract
             await tx.laborContract.create({
@@ -38,13 +38,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     code: 'HT_R_' + Date.now(),
                     employeeId: contract.employeeId,
                     templateId: contract.templateId,
-                    contractType: contract.contractType,
+                    signDate: new Date(),
                     startDate: new Date(),
                     endDate: new Date(newEndDate || new Date().setFullYear(new Date().getFullYear() + 1)),
-                    probationMonths: 0,
-                    salary: contract.salary,
-                    position: contract.position,
-                    department: contract.department,
                     status: 'DRAFT'
                 }
             });
@@ -55,7 +51,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         }
         await prisma.laborContract.update({
             where: { id: contractId },
-            data: { status: 'TERMINATED', remark: (contract.remark || '') + ' [Terminated manually]' }
+            data: { status: 'TERMINATED' }
         });
     }
 

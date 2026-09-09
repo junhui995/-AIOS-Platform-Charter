@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { FileText, AlertTriangle, Clock, CheckCircle, PlusCircle, XCircle } from 'lucide-react';
+import { FileText, AlertTriangle, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ContractsDashboard() {
@@ -38,7 +38,7 @@ export default function ContractsDashboard() {
          } else {
              alert('操作失败: ' + data.error);
          }
-     } catch (e) {
+     } catch {
          alert('请求异常');
      }
   };

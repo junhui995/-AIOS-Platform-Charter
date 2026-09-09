@@ -32,6 +32,9 @@ importers:
       '@aios/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@aios/tools':
+        specifier: workspace:*
+        version: link:../../packages/tools
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

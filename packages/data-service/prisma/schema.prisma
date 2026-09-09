@@ -326,4 +326,289 @@ model WorkflowDefinition {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  versions    WorkflowVersion[]
+}
+
+model WorkflowVersion {
+  id           String             @id @default(uuid())
+  definitionId String
+  version      String
+  nodes        Json
+  edges        Json
+  isPublished  Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+
+  definition   WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  instances    ProcessInstance[]
+}
+
+model ProcessInstance {
+  id           String             @id @default(uuid())
+  versionId    String
+  initiatorId  String?
+  formData     Json
+  currentNodes Json               @default("[]")
+  status       String             @default("RUNNING") // RUNNING, COMPLETED, TERMINATED, CANCELLED
+  startedAt    DateTime           @default(now())
+  endedAt      DateTime?
+
+  version      WorkflowVersion    @relation(fields: [versionId], references: [id])
+  tasks        ProcessTask[]
+  logs         ProcessLog[]
+}
+
+model ProcessTask {
+  id             String          @id @default(uuid())
+  instanceId     String
+  nodeId         String
+  nodeName       String
+  taskType       String
+  assigneeId     String?
+  candidateGroup String?
+  status         String          @default("PENDING") // PENDING, COMPLETED, REJECTED, CANCELLED
+  createdAt      DateTime        @default(now())
+  completedAt    DateTime?
+
+  instance       ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+}
+
+model ProcessLog {
+  id          String          @id @default(uuid())
+  instanceId  String
+  taskId      String?
+  actionType  String
+  operatorId  String?
+  details     String?         // Using String to hold comment, JSON could be used later
+  createdAt   DateTime        @default(now())
+
+  instance    ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+}
+
+
+// -----------------------------------------------------------------
+// HR Extension Domain: Grade & Training
+// -----------------------------------------------------------------
+
+model Grade {
+  id             String   @id @default(uuid())
+  code           String   @unique // e.g. P6
+  name           String // e.g. 资深
+  salaryRangeMin Decimal
+  salaryRangeMax Decimal?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Training {
+  id               String   @id @default(uuid())
+  code             String   @unique // e.g. TRN-001
+  name             String
+  type             String // e.g. mandatory, optional, external
+  completionStatus String   @default("PENDING")
+  targetGroup      String? // Description of who is required
+  skillTags        String[] // Stored as array of strings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------
+// Counterparty Domain
+// -----------------------------------------------------------------
+
+model Counterparty {
+  id                 String  @id @default(uuid())
+  code               String  @unique // e.g. CP-001
+  companyName        String
+  category           String // construction, design, service, material, consulting
+  registeredCapital  String?
+  qualificationGrade String?
+  status             String  @default("APPROVED") // approved, pending, frozen
+  socialCreditCode   String  @unique
+  contactName        String?
+  contactPhone       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bankAccounts BankAccount[]
+  contracts    BusinessContract[]
+  receipts     Receipt[]
+  payments     Payment[]
+  invoices     Invoice[]
+}
+
+model BankAccount {
+  id             String @id @default(uuid())
+  counterpartyId String
+  bankName       String
+  accountNumber  String
+
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Business Contract Domain
+// -----------------------------------------------------------------
+
+model ContractTemplate {
+  id           String  @id @default(uuid())
+  code         String  @unique // e.g. TPL-001
+  name         String
+  version      String
+  approvalFlow String?
+  status       String  @default("ACTIVE") // active, inactive
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessContract {
+  id                 String   @id @default(uuid())
+  code               String   @unique // e.g. HT-2026-001
+  name               String
+  counterpartyId     String
+  amount             Decimal
+  signDate           DateTime
+  expiryDate         DateTime
+  relatedProjectCode String?
+  status             String   @default("DRAFT") // draft, approving, effective, executing, archived, completed, suspended, terminated, voided
+  pushDownActions    String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  counterparty Counterparty         @relation(fields: [counterpartyId], references: [id])
+  supplements  ContractSupplement[]
+  receipts     Receipt[]
+  payments     Payment[]
+  invoices     Invoice[]
+  borrows      ContractBorrow[]
+}
+
+model ContractSupplement {
+  id             String  @id @default(uuid())
+  code           String  @unique // e.g. SUP-2026-001-01
+  name           String
+  mainContractId String
+  amountDelta    Decimal @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mainContract BusinessContract @relation(fields: [mainContractId], references: [id])
+}
+
+model ContractBorrow {
+  id                 String   @id @default(uuid())
+  code               String   @unique // e.g. BW-001
+  contractId         String
+  borrowerName       String
+  borrowDate         DateTime
+  expectedReturnDate DateTime
+  status             String   @default("BORROWING") // borrowing, returned, overdue
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract BusinessContract @relation(fields: [contractId], references: [id])
+}
+
+model PermissionTransfer {
+  id                    String   @id @default(uuid())
+  code                  String   @unique // e.g. TRF-001
+  transferFrom          String
+  transferTo            String
+  transferContractCount Int      @default(0)
+  transferDate          DateTime
+  reason                String // resignation, transfer, promotion
+  status                String   @default("PENDING") // completed, pending, rejected
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------
+// Payment & Collection Domain
+// -----------------------------------------------------------------
+
+model Receipt {
+  id                   String   @id @default(uuid())
+  code                 String   @unique // e.g. RCP-001
+  contractId           String
+  counterpartyId       String
+  amount               Decimal
+  receiptDate          DateTime
+  paymentMethod        String // bankTransfer, cash, check, other
+  reconciliationStatus String   @default("UNRECONCILED") // reconciled, partial, unReconciled
+  isOverdue            Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract     BusinessContract @relation(fields: [contractId], references: [id])
+  counterparty Counterparty     @relation(fields: [counterpartyId], references: [id])
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  code           String   @unique // e.g. PAY-001
+  contractId     String
+  counterpartyId String
+  amount         Decimal
+  paymentDate    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract     BusinessContract @relation(fields: [contractId], references: [id])
+  counterparty Counterparty     @relation(fields: [counterpartyId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Invoice Domain
+// -----------------------------------------------------------------
+
+model Invoice {
+  id                        String  @id @default(uuid())
+  invoiceNumber             String  @unique // e.g. 243456578
+  contractId                String
+  counterpartyId            String
+  invoiceType               String // vatSpecial, vatGeneral, electronic
+  amount                    Decimal
+  taxRate                   Decimal // e.g. 9
+  taxAmount                 Decimal
+  totalWithTax              Decimal
+  status                    String  @default("PENDING") // issued, pending, cancelled
+  reconciliationMatchStatus String  @default("UNMATCHED") // matched, partialMatch, unMatched
+  reconciliationDiff        Decimal @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract     BusinessContract @relation(fields: [contractId], references: [id])
+  counterparty Counterparty     @relation(fields: [counterpartyId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Warning & Alert Domain
+// -----------------------------------------------------------------
+
+model Alert {
+  id               String   @id @default(uuid())
+  code             String   @unique // e.g. WARN-20260724-001
+  type             String // overduePayment, contractExpiry, attendanceAnomaly, probationExpiry, budgetOverrun
+  level            String // high, medium, low
+  title            String
+  description      String
+  triggerTime      DateTime
+  triggerRule      String
+  relatedObjectId  String
+  status           String   @default("PENDING") // pending, processing, resolved
+  availableActions String[] // Stored as array of strings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
