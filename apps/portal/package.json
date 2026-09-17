@@ -12,6 +12,7 @@
     "@aios/compiler": "workspace:*",
     "@aios/data-service": "workspace:*",
     "@aios/runtime": "workspace:*",
+    "@aios/tools": "workspace:*",
     "clsx": "^2.1.1",
     "expr-eval": "^2.0.2",
     "framer-motion": "^11.3.17",

@@ -1,52 +1,58 @@
-/* eslint-disable */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
 
 export async function GET() {
   try {
-    const now = new Date();
+    const today = new Date();
+    const active = await prisma.laborContract.count({ where: { status: 'ACTIVE' } });
 
-    // We fetch all active contracts and calculate expiring windows locally to avoid complex Prisma raw queries
-    const activeContracts = await prisma.laborContract.findMany({
-        where: { status: 'ACTIVE' },
-        select: { id: true, endDate: true }
+    // Add logic to count contracts expiring soon based on endDate
+    const within30 = await prisma.laborContract.count({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lte: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000),
+          gt: today
+        }
+      }
     });
 
-    let within30 = 0;
-    let within60 = 0;
-    let within90 = 0;
-    let expired = 0;
-
-    for (const c of activeContracts) {
-        if (!c.endDate) continue;
-        const diffDays = Math.floor((new Date(c.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) {
-            expired++;
-        } else if (diffDays <= 30) {
-            within30++;
-        } else if (diffDays <= 60) {
-            within60++;
-        } else if (diffDays <= 90) {
-            within90++;
+    const within60 = await prisma.laborContract.count({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lte: new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000),
+          gt: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
         }
-    }
+      }
+    });
 
-    const totalActive = activeContracts.length;
+    const within90 = await prisma.laborContract.count({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lte: new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000),
+          gt: new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000)
+        }
+      }
+    });
 
-    // Also explicitly count expired status if any
-    const explicitlyExpiredCount = await prisma.laborContract.count({
-        where: { status: 'EXPIRED' }
+    const expired = await prisma.laborContract.count({
+      where: {
+        endDate: { lt: today },
+        status: { notIn: ['TERMINATED'] }
+      }
     });
 
     return NextResponse.json({
-        totalActive,
+        totalActive: active,
         within30,
         within60,
         within90,
-        expired: expired + explicitlyExpiredCount
+        expired
     });
-  } catch (error: unknown) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: "Failed to fetch contract stats", details: error.message }, { status: 500 });
   }
 }
