@@ -106,7 +106,7 @@ export default function EmployeeLifecyclePage() {
                     },
                     body: JSON.stringify({
                         definitionId: hrDef.id,
-                        initiatorId: "EMP-000", // TODO: Auth Boundary - replace with session user ID from API when integrated
+                        initiatorId: null, // FIXME: Real identity chain is missing here. Need to integrate with existing session / NextAuth API.
                         formData: {
                             contractId: contract.id,
                             employeeId: params.id,
