@@ -106,7 +106,7 @@ export default function EmployeeLifecyclePage() {
                     },
                     body: JSON.stringify({
                         definitionId: hrDef.id,
-                        initiatorId: "EMP-000", // TODO: Replace with proper auth session user ID
+                        initiatorId: "EMP-000", // TODO: Auth Boundary - replace with session user ID from API when integrated
                         formData: {
                             contractId: contract.id,
                             employeeId: params.id,
