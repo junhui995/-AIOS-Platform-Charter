@@ -17,11 +17,11 @@ export class AssigneeResolver {
             case 'SPECIFIC_USER':
                 // In a real system, node.data.assigneeIds would store an array
                 // For now, resolve placeholder correctly or fall back to system
-                return { type: 'USER', assigneeIds: ['EMP-SPECIFIC-ID'] };
+                return { type: 'USER', assigneeIds: Array.isArray(node.data?.assigneeIds) ? (node.data.assigneeIds as string[]) : [] };
 
             case 'SPECIFIC_ROLE':
                 // Query system roles to resolve users in the future
-                return { type: 'ROLE', groupId: 'HRBP' };
+                return { type: 'ROLE', groupId: typeof node.data?.assigneeRole === 'string' ? node.data.assigneeRole : '' };
 
             case 'FORM_VARIABLE':
                 const approverId = context.formData['approverId'];
