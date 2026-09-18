@@ -9,6 +9,8 @@ export default function ContractsDashboard() {
   const [stats, setStats] = useState({ totalActive: 0, within30: 0, within60: 0, within90: 0, expired: 0 });
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success"|"error"|null>(null);
 
   useEffect(() => {
      Promise.all([
@@ -33,13 +35,13 @@ export default function ContractsDashboard() {
          });
          const data = await res.json();
          if (data.success) {
-             alert('操作成功');
-             window.location.reload();
+             setMessage('操作成功'); setMessageType('success');
+             setTimeout(() => window.location.reload(), 1500);
          } else {
-             alert('操作失败: ' + data.error);
+             setMessage('操作失败: ' + data.error); setMessageType('error');
          }
      } catch {
-         alert('请求异常');
+         setMessage('请求异常'); setMessageType('error');
      }
   };
 
@@ -55,6 +57,12 @@ export default function ContractsDashboard() {
                   <PlusCircle className="w-4 h-4"/> 新建合同
               </button>
            </div>
+
+           {message && (
+             <div className={`mb-4 p-3 rounded text-sm ${messageType === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                 {message}
+             </div>
+           )}
 
            {/* Stats Dashboard */}
            <div className="grid grid-cols-5 gap-4 mb-8">

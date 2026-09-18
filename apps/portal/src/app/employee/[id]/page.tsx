@@ -22,6 +22,8 @@ export default function EmployeeLifecyclePage() {
     const [events, setEvents] = useState<any[]>([]);
     const [contracts, setContracts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState<"success"|"error"|null>(null);
 
     useEffect(() => {
         Promise.all([
@@ -81,7 +83,7 @@ export default function EmployeeLifecyclePage() {
             const contract = await res.json();
 
             if (!contract.id) {
-                alert("劳动合同创建失败");
+                setMessage("劳动合同创建失败"); setMessageType("error");
                 return;
             }
 
@@ -104,7 +106,7 @@ export default function EmployeeLifecyclePage() {
                     },
                     body: JSON.stringify({
                         definitionId: hrDef.id,
-                        initiatorId: "CURRENT_USER", // mock
+                        initiatorId: "EMP-000", // TODO: Replace with proper auth session user ID
                         formData: {
                             contractId: contract.id,
                             employeeId: params.id,
@@ -112,17 +114,15 @@ export default function EmployeeLifecyclePage() {
                     }),
                 });
 
-                alert("合同已创建并提交审批流程！");
+                setMessage("合同已创建并提交审批流程！"); setMessageType("success");
                 window.location.reload();
             } else {
-                alert(
-                    "合同已创建为草稿。未找到审批流程定义，请先通过 /workflow/designer 创建 code 为 CONTRACT_APPROVAL 的流程"
-                );
+                setMessage("合同已创建为草稿。未找到审批流程定义，请先通过 /workflow/designer 创建 code 为 CONTRACT_APPROVAL 的流程"); setMessageType("error");
                 window.location.reload();
             }
         } catch (error) {
             console.error(error);
-            alert("合同创建或审批流程发起失败");
+            setMessage("合同创建或审批流程发起失败"); setMessageType("error");
         }
     };
 
@@ -204,6 +204,12 @@ export default function EmployeeLifecyclePage() {
                             新建劳动合同并发起审批
                         </button>
                     </div>
+
+                    {message && (
+                        <div className={`mt-4 p-3 rounded text-sm ${messageType === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {message}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-6">
