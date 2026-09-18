@@ -1,10 +1,9 @@
-/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { actionType, operatorId, remark, newEndDate } = await req.json();
+    const { actionType, newEndDate } = await req.json();
     const contractId = params.id;
 
     const contract = await prisma.laborContract.findUnique({

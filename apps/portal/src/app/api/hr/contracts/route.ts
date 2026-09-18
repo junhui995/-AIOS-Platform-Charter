@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { prisma } from '@aios/data-service';
 
@@ -17,7 +16,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json(contracts);
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch contracts" }, { status: 500 });
   }
 }
@@ -25,7 +24,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { employeeId, templateId, contractType, startDate, endDate, probationMonths, salary, position, department, remark } = body;
+    const { employeeId, templateId, startDate, endDate } = body;
 
     const contract = await prisma.laborContract.create({
        data: {
