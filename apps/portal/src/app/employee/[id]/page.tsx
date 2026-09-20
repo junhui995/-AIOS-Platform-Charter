@@ -14,9 +14,11 @@ import {
     PlusCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 export default function EmployeeLifecyclePage() {
     const params = useParams();
+    const { data: session } = useSession();
 
     const [employee, setEmployee] = useState<any>(null);
     const [events, setEvents] = useState<any[]>([]);
@@ -106,7 +108,7 @@ export default function EmployeeLifecyclePage() {
                     },
                     body: JSON.stringify({
                         definitionId: hrDef.id,
-                        initiatorId: null, // FIXME: Real identity chain is missing here. Need to integrate with existing session / NextAuth API.
+                        initiatorId: (session?.user as any)?.id || null,
                         formData: {
                             contractId: contract.id,
                             employeeId: params.id,

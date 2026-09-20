@@ -2,6 +2,7 @@ import './globals.css';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import AISidebar from '@/components/ai/AISidebar';
+import NextAuthProvider from '@/components/providers/NextAuthProvider';
 
 export const metadata = {
   title: 'AIOS Workspace 2.0',
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="bg-[#F5F5F7] min-h-screen text-[#1C1C1E] flex">
+        <NextAuthProvider>
         <Sidebar />
         <div className="flex flex-col flex-1 w-full ml-[240px]">
           <Topbar />
@@ -24,6 +26,7 @@ export default function RootLayout({
           </main>
         </div>
         <AISidebar />
+        </NextAuthProvider>
       </body>
     </html>
   );
