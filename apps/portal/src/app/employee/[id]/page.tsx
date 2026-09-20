@@ -1,5 +1,4 @@
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -20,9 +19,9 @@ export default function EmployeeLifecyclePage() {
     const params = useParams();
     const { data: session } = useSession();
 
-    const [employee, setEmployee] = useState<any>(null);
-    const [events, setEvents] = useState<any[]>([]);
-    const [contracts, setContracts] = useState<any[]>([]);
+    const [employee, setEmployee] = useState<{id?: string, name?: string, code?: string, status?: string, hireDate?: string, department?: {name?: string}, positions?: {position?: {name?: string}}[]} | null>(null);
+    const [events, setEvents] = useState<{id?: string, type?: string, date?: string, description?: string, status?: string, code?: string, startDate?: string, endDate?: string}[]>([]);
+    const [contracts, setContracts] = useState<{id?: string, type?: string, date?: string, description?: string, status?: string, code?: string, startDate?: string, endDate?: string}[]>([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState("");
     const [messageType, setMessageType] = useState<"success"|"error"|null>(null);
@@ -39,7 +38,7 @@ export default function EmployeeLifecyclePage() {
         ])
             .then(([emps, evts, cts]) => {
                 const emp = Array.isArray(emps)
-                    ? emps.find((e: any) => e.id === params.id)
+                    ? emps.find((e: {id: string}) => e.id === params.id)
                     : emps;
 
                 setEmployee(emp);
@@ -95,7 +94,7 @@ export default function EmployeeLifecyclePage() {
 
             const hrDef = Array.isArray(defs)
                 ? defs.find(
-                      (d: any) => d.code === "CONTRACT_APPROVAL"
+                      (d: {code: string; id: string}) => d.code === "CONTRACT_APPROVAL"
                   )
                 : null;
 
@@ -108,7 +107,7 @@ export default function EmployeeLifecyclePage() {
                     },
                     body: JSON.stringify({
                         definitionId: hrDef.id,
-                        initiatorId: (session?.user as any)?.id || null,
+                        initiatorId: (session?.user as {id?: string})?.id || null,
                         formData: {
                             contractId: contract.id,
                             employeeId: params.id,
@@ -239,7 +238,7 @@ export default function EmployeeLifecyclePage() {
                                     </span>
                                     <span className="font-medium">
                                         {new Date(
-                                            employee.hireDate
+                                            employee.hireDate || ""
                                         ).toLocaleDateString()}
                                     </span>
                                 </div>
@@ -281,7 +280,7 @@ export default function EmployeeLifecyclePage() {
                                         </span>
                                         <span className="font-medium">
                                             {new Date(
-                                                activeContract.startDate
+                                                activeContract.startDate || ""
                                             ).toLocaleDateString()}
                                         </span>
                                     </div>
@@ -292,7 +291,7 @@ export default function EmployeeLifecyclePage() {
                                         </span>
                                         <span className="font-medium text-blue-600">
                                             {new Date(
-                                                activeContract.endDate
+                                                activeContract.endDate || ""
                                             ).toLocaleDateString()}
                                         </span>
                                     </div>
@@ -356,11 +355,11 @@ export default function EmployeeLifecyclePage() {
 
                                                 <div className="text-xs text-gray-500">
                                                     {new Date(
-                                                        c.startDate
+                                                        c.startDate || ""
                                                     ).getFullYear()}{" "}
                                                     -{" "}
                                                     {new Date(
-                                                        c.endDate
+                                                        c.endDate || ""
                                                     ).getFullYear()}
                                                 </div>
                                             </div>
@@ -409,7 +408,7 @@ export default function EmployeeLifecyclePage() {
 
                                                 <div className="text-xs text-gray-500">
                                                     {new Date(
-                                                        e.date
+                                                        e.date || ""
                                                     ).toLocaleDateString()}
                                                 </div>
                                             </div>

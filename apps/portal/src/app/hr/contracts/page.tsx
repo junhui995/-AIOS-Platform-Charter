@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -7,7 +6,7 @@ import Link from 'next/link';
 
 export default function ContractsDashboard() {
   const [stats, setStats] = useState({ totalActive: 0, within30: 0, within60: 0, within90: 0, expired: 0 });
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<{id: string, code?: string, contractType?: string, startDate: string, endDate: string, status?: string, employeeId?: string, employee?: {name?: string}}[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success"|"error"|null>(null);

@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -14,7 +13,7 @@ import ReactFlow, {
   Node
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Save, PlusCircle, Settings, Play, GitMerge, FileText } from 'lucide-react';
+import { Save, PlusCircle, Settings, Play, GitMerge } from 'lucide-react';
 
 const initialNodes: Node[] = [
   { id: 'start', position: { x: 250, y: 50 }, data: { label: '发起节点 (Start)' }, type: 'input' },
@@ -32,7 +31,7 @@ export default function WorkflowDesignerPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [availableForms, setAvailableForms] = useState<unknown[]>([]);
+  const [availableForms, setAvailableForms] = useState<{ id: string; name: string }[]>([]);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -159,7 +158,7 @@ export default function WorkflowDesignerPage() {
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 max-w-[200px]"
           >
              <option value="">未绑定表单</option>
-             {availableForms.map((f: any) => (
+             {availableForms.map((f: { id: string; name: string }) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
              ))}
           </select>

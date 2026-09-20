@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +5,7 @@ import { Clock, CheckCircle, FileText, Send, User, AlertCircle } from 'lucide-re
 
 export default function TaskCenterPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'initiated' | 'completed'>('pending');
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<{id: string, instanceId?: string, nodeName?: string, workflowName?: string, type?: string, status?: string, createdAt?: string, initiator?: string, instance?: {version?: {definition?: {name?: string}}, formData?: Record<string, unknown>, initiatorId?: string}}[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Mock fetching - in real implementation this hits /api/workflow/instances or /api/workflow/tasks

@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function EmployeeListPage() {
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<{id?: string, name?: string, code?: string, status?: string, department?: {name?: string}, hireDate?: string}[]>([]);
 
   useEffect(() => {
     fetch('/api/employee')

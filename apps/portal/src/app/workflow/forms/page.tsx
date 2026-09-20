@@ -1,8 +1,7 @@
-/* eslint-disable */
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Save, Settings, FormInput, FileText, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Save, Settings, FormInput, FileText } from 'lucide-react';
 
 interface FormField {
   id: string;
@@ -13,7 +12,7 @@ interface FormField {
 }
 
 export default function FormTemplateBuilder() {
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<{id: string, name?: string, code?: string}[]>([]);
   const [activeTemplate, setActiveTemplate] = useState<{ id?: string, name: string, code: string, fields: FormField[] } | null>(null);
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function FormTemplateBuilder() {
      });
   };
 
-  const updateField = (id: string, key: string, value: any) => {
+  const updateField = (id: string, key: string, value: unknown) => {
      if (!activeTemplate) return;
      setActiveTemplate({
         ...activeTemplate,
@@ -99,7 +98,7 @@ export default function FormTemplateBuilder() {
              {templates.map(t => (
                  <div
                    key={t.id}
-                   onClick={() => setActiveTemplate({ id: t.id, name: t.name, code: t.code, fields: t.schema || [] })}
+                   onClick={() => setActiveTemplate({ id: t.id, name: t.name || "", code: t.code || "", fields: ((t as {schema?: unknown[]}).schema as FormField[]) || [] })}
                    className={`p-3 rounded mb-1 cursor-pointer flex items-center gap-2 ${activeTemplate?.id === t.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-100 border border-transparent'}`}
                  >
                     <FileText className={`w-4 h-4 ${activeTemplate?.id === t.id ? 'text-blue-600' : 'text-gray-400'}`} />
@@ -114,7 +113,7 @@ export default function FormTemplateBuilder() {
           {!activeTemplate ? (
              <div className="flex-1 flex items-center justify-center text-gray-400 flex-col gap-4">
                  <FormInput className="w-16 h-16 opacity-20" />
-                 <p>选择左侧表单或点击 "+" 创建新模板，用于绑定流程节点</p>
+                 <p>选择左侧表单或点击 &quot;+&quot; 创建新模板，用于绑定流程节点</p>
              </div>
           ) : (
              <>
@@ -144,7 +143,7 @@ export default function FormTemplateBuilder() {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {activeTemplate.fields.map((field, index) => (
+                                    {activeTemplate.fields.map((field) => (
                                         <div key={field.id} className="relative group border border-transparent hover:border-blue-200 hover:bg-blue-50 p-4 rounded -mx-4 transition-colors">
                                             <div className="flex gap-4">
                                                 <div className="w-1/3 text-right pt-2">
