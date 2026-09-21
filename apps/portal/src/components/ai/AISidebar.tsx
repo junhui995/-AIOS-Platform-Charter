@@ -6,10 +6,11 @@ import { Sparkles, X, Send } from 'lucide-react';
 export default function AISidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string}[]>([
-    { role: 'ai', content: '你好，我是你的 AI 业务助手。我可以帮你查阅企业知识库、起草表单，或者分析业务数据。' }
+    { role: 'ai', content: '你好，我是 AIOS Copilot。我的后台运行的是真实 AIOS Runtime（编译 DNA → Plan → Guard → 工具 → 事件流水）。试试：「帮张三请假」或「帮 Alice 报销 600 块的打车费」；对上次会话说「继续」可断点续跑。' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const sessionIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -35,7 +36,7 @@ export default function AISidebar() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMessage }),
+        body: JSON.stringify({ prompt: userMessage, resumeSessionId: sessionIdRef.current ?? undefined }),
       });
 
       if (!response.body) throw new Error('No response body');
@@ -61,6 +62,9 @@ export default function AISidebar() {
               }
               try {
                 const parsed = JSON.parse(data);
+                if (parsed.sessionId) {
+                  sessionIdRef.current = parsed.sessionId;
+                }
                 if (parsed.text) {
                   setMessages(prev => {
                     const newMessages = [...prev];

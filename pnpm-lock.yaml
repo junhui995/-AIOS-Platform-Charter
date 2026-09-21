@@ -41,6 +41,9 @@ importers:
       '@aios/data-service':
         specifier: workspace:*
         version: link:../../packages/data-service
+      '@aios/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@aios/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime

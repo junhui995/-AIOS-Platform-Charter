@@ -12,6 +12,7 @@
   "dependencies": {
     "@aios/compiler": "workspace:*",
     "@aios/data-service": "workspace:*",
+    "@aios/events": "workspace:*",
     "@aios/runtime": "workspace:*",
     "@aios/tools": "workspace:*",
     "clsx": "^2.1.1",
