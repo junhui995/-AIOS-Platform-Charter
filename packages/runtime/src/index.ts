@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import { ToolDefinition, ToolRegistry } from '@aios/tools';
+import { ToolDefinition, ToolRegistry, toolRegistry } from '@aios/tools';
 import { BusinessSemanticAST } from '@aios/compiler';
 import { PolicyGuard, GuardedResult, formatDecision } from './guard';
 import { PlanningAgent, PlanStep, parseRequest, fillTemplates, applyStepResult } from './planner';
@@ -35,7 +35,7 @@ export class RuntimeEngine {
 
   constructor(ast: BusinessSemanticAST, options: RuntimeOptions = {}) {
     this.astContext = ast;
-    this.registry = options.registry ?? new ToolRegistry();
+    this.registry = options.registry ?? toolRegistry;
     this.guard = options.guard ?? new PolicyGuard(ast);
     this.sessions = new SessionStore(options.sessionDir);
 
@@ -132,9 +132,20 @@ export class RuntimeEngine {
       return `The action was intercepted by policy ${policyId ?? '(policy)'} and routed to a Finance Manager for human approval.`;
     }
 
+    const denies = session.executed.filter((e) => e.decision.decision === 'DENY');
+    if (denies.length > 0) {
+      const first = denies[0] as ExecutedStepLike;
+      const policyId = 'policyId' in first.decision ? first.decision.policyId : undefined;
+      const reason = 'reason' in first.decision ? (first.decision as { reason?: string }).reason : undefined;
+      return `Blocked by policy ${policyId ?? '(policy)'}${reason ? `: ${reason}` : ''}.`;
+    }
+
     const last = session.executed[session.executed.length - 1];
     if (!last) return 'No steps were executed.';
 
+    if (last.result.ok === false) {
+      return `Execution failed at step "${last.tool}": ${last.result.error}.`;
+    }
     if (last.tool === 'autoApproveExpense') {
       return `Expense approved automatically (compliant with policy).`;
     }

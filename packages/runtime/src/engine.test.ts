@@ -3,9 +3,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { describe, it, expect, afterEach } from 'vitest';
 import { BusinessSemanticAST } from '@aios/compiler';
-import { ToolRegistry, ToolDefinition } from '@aios/tools';
+import { ToolRegistry, ToolDefinition, toolRegistry } from '@aios/tools';
 import { RuntimeEngine } from './index';
 import { PolicyGuard } from './guard';
+import { CheckpointSession } from './session';
 
 const tmpDirs: string[] = [];
 
@@ -80,6 +81,44 @@ function stubRegistry(): { registry: ToolRegistry; calls: Record<string, number>
 }
 
 describe('RuntimeEngine plan + guard + checkpoint', () => {
+  it('defaults to the shared registered tool registry', () => {
+    const engine = new RuntimeEngine(financeAst, { sessionDir: tmpSessionDir() });
+    const { registry } = engine as unknown as { registry: ToolRegistry };
+    expect(registry.get('getEmployeeIdByName')).toBeDefined();
+    expect(registry.get('createExpense')).toBeDefined();
+    expect(registry.get('requestFinanceApproval')).toBeDefined();
+    expect(registry).toBe(toolRegistry);
+  });
+
+  it('summarizes a failure instead of claiming auto-approval', async () => {
+    const engine = new RuntimeEngine(financeAst, {
+      registry: stubRegistry().registry,
+      guard: new PolicyGuard(financeAst),
+      sessionDir: tmpSessionDir(),
+    });
+    // Simulate: run description is irrelevant; we just assert denials/failures map to honest summaries.
+    const outcome = (engine as unknown as { summarize(s: CheckpointSession): string }).summarize({
+      sessionId: 'x',
+      request: 'x',
+      domain: 'Finance',
+      astVersion: '1.0',
+      plan: [],
+      executed: [
+        {
+          index: 0,
+          tool: 'autoApproveExpense',
+          args: {},
+          decision: { decision: 'DENY', policyId: 'policy_expense_limit', reason: 'blocked' },
+          result: { ok: false, error: 'blocked' },
+          at: '',
+        },
+      ],
+      createdAt: '',
+      updatedAt: '',
+    });
+    expect(outcome).toContain('Blocked by policy');
+  });
+
   it('runs the reimbursement plan and redirects >500 via the Guard', async () => {
     const { registry, calls } = stubRegistry();
     const engine = new RuntimeEngine(financeAst, {
