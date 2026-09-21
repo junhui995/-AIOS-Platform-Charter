@@ -20,6 +20,10 @@ export const employeeRepository = {
     return prisma.employee.findFirst({ where: { name }, include: employeeInclude });
   },
 
+  async findByCode(code: string) {
+    return prisma.employee.findFirst({ where: { code }, include: employeeInclude });
+  },
+
   async findById(id: string) {
     return prisma.employee.findUnique({ where: { id }, include: employeeInclude });
   },

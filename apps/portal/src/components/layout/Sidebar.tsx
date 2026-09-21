@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import {
   Home, Users, FileText, Settings,
   PieChart, Sparkles,
-  Network, Workflow, BarChart3, Calculator, Smartphone
+  Network, Workflow, BarChart3, Calculator, Smartphone,
+  CalendarDays, Wallet, ShieldAlert
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -31,6 +32,11 @@ export default function Sidebar() {
         <NavItem href="/org/structure" icon={<Network size={18} />} label="组织架构" active={isAct('/org/structure')} />
         <NavItem href="/employee/list" icon={<Users size={18} />} label="花名册管理" active={isAct('/employee/list')} />
         <NavItem href="/hr/contracts" icon={<FileText size={18} />} label="劳动合同" active={isAct('/hr/contracts')} />
+        <NavItem href="/hr/leave" icon={<CalendarDays size={18} />} label="请假与假期" active={isAct('/hr/leave')} />
+        <NavItem href="/hr/expenses" icon={<Wallet size={18} />} label="报销审批" active={isAct('/hr/expenses')} />
+
+        <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">预警与洞察</div>
+        <NavItem href="/hr/alerts" icon={<ShieldAlert size={18} />} label="预警中心" active={isAct('/hr/alerts')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">薪酬绩效 (C&B)</div>
         <NavItem href="/hr/attendance" icon={<PieChart size={18} />} label="考勤中心" active={isAct('/hr/attendance')} />

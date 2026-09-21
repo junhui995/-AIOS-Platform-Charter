@@ -11,6 +11,59 @@ export const workflowRepository = {
     return prisma.workflowDefinition.findMany({ orderBy: { createdAt: 'desc' } });
   },
 
+  async findByCode(code: string) {
+    return prisma.workflowDefinition.findFirst({ where: { code } });
+  },
+
+  /**
+   * Idempotently creates a definition + first published version.
+   * Used by the portal to seed built-in approval flows (leave, expense).
+   */
+  async findOrCreateDefinition(data: {
+    code: string;
+    name: string;
+    nodes: unknown;
+    edges: unknown;
+  }) {
+    const existing = await prisma.workflowDefinition.findFirst({
+      where: { code: data.code },
+      include: { versions: { select: { isPublished: true } } },
+    });
+
+    if (existing?.versions?.some((v) => v.isPublished)) return existing;
+
+    if (existing) {
+      await prisma.workflowVersion.create({
+        data: {
+          definitionId: existing.id,
+          version: 'v1',
+          nodes: data.nodes as object,
+          edges: data.edges as object,
+          isPublished: true,
+        },
+      });
+      return existing;
+    }
+
+    return prisma.workflowDefinition.create({
+      data: {
+        code: data.code,
+        name: data.name,
+        nodes: data.nodes as object,
+        edges: data.edges as object,
+        isActive: true,
+        versions: {
+          create: {
+            version: 'v1',
+            nodes: data.nodes as object,
+            edges: data.edges as object,
+            isPublished: true,
+          },
+        },
+      },
+    });
+  },
+
   async saveDefinition(data: { id?: string; name: string; nodes: unknown; edges: unknown; isActive: boolean }) {
     if (data.id) {
       return prisma.workflowDefinition.update({
@@ -102,6 +155,24 @@ export const workflowRepository = {
         candidateGroup: data.candidateGroup ?? null,
         status: 'PENDING',
       },
+    });
+  },
+
+  /** Find the newest RUNNING instance whose formData[field] === value. */
+  async findInstanceByFormField(field: string, value: string) {
+    return prisma.processInstance.findFirst({
+      where: {
+        status: 'RUNNING',
+        formData: { path: [field], equals: value },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+  },
+
+  async findPendingTaskByInstance(instanceId: string) {
+    return prisma.processTask.findFirst({
+      where: { instanceId, status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
     });
   },
 

@@ -152,6 +152,7 @@ export const EventTypes = {
   LEAVE_REQUEST_STATUS_CHANGED: 'LeaveRequestStatusChanged',
   EXPENSE_CREATED: 'ExpenseCreated',
   EXPENSE_APPROVED: 'ExpenseApproved',
+  EXPENSE_REJECTED: 'ExpenseRejected',
   EXPENSE_APPROVAL_REQUIRED: 'ExpenseApprovalRequired',
   TOOL_CALLED: 'ToolCalled',
   PROCESS_INSTANCE_STARTED: 'ProcessInstanceStarted',

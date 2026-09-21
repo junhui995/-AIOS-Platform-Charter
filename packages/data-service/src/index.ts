@@ -19,3 +19,4 @@ export * from './repositories/contract';
 export * from './repositories/performance';
 export * from './repositories/workflow';
 export * from './repositories/expense';
+export * from './repositories/alert';

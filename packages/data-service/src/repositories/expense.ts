@@ -21,6 +21,18 @@ export const expenseRepository = {
     });
   },
 
+  async listWithDetails(employeeId?: string | null) {
+    return prisma.expense.findMany({
+      where: employeeId ? { employeeId } : {},
+      include: {
+        employee: { select: { name: true, code: true } },
+        department: { select: { name: true } },
+        approvedBy: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
   async findById(id: string) {
     return prisma.expense.findUnique({ where: { id } });
   },

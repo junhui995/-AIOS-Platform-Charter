@@ -82,7 +82,40 @@ export class WorkflowEngine {
         const nodes = task.instance.version.nodes as unknown as WorkflowNode[];
         const edges = task.instance.version.edges as unknown as WorkflowEdge[];
 
-        await this.advance(task.instanceId, task.nodeId, nodes, edges);
+        await this.advancePastCompletedNode(task.instanceId, task.nodeId, nodes, edges);
+    }
+
+    /**
+     * Routes past a completed user task to its successors and resumes the
+     * engine loop from there. Re-entering advance() on the completed task
+     * node itself would re-create the same approval task.
+     */
+    private static async advancePastCompletedNode(
+        instanceId: string,
+        completedNodeId: string,
+        nodes: WorkflowNode[],
+        edges: WorkflowEdge[]
+    ) {
+        const snapshot = await workflowRepository.findInstance(instanceId);
+        if (!snapshot) throw new Error("Instance not found");
+
+        const context: WorkflowContext = {
+            instanceId,
+            definitionId: 'resolved',
+            versionId: snapshot.versionId,
+            initiatorId: snapshot.initiatorId,
+            formData: snapshot.formData as Record<string, unknown>,
+            variables: {},
+            currentNodeId: completedNodeId,
+            nodes,
+            edges
+        };
+
+        const nextNodeIds = WorkflowRouter.route(context);
+        if (nextNodeIds.length === 0) return;
+
+        await workflowRepository.updateInstanceNodes(instanceId, nextNodeIds);
+        await this.advance(instanceId, nextNodeIds[0], nodes, edges);
     }
 
     // --- Internal Engine Loop ---
