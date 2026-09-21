@@ -1,85 +1,138 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import * as path from 'path';
+import { z } from 'zod';
 
-export interface BusinessSemanticAST {
-    version: string;
-    domain: string;
-    nodes: ASTNode[];
+// ---------------------------------------------------------------------------
+// Enterprise DNA Configuration Schema (validated, no `any` passthrough)
+// ---------------------------------------------------------------------------
+
+export const entitySchema = z.object({
+  name: z.string().min(1),
+  attributes: z.record(z.string()).default({}),
+});
+export type EntityConfig = z.infer<typeof entitySchema>;
+
+export const policySchema = z.object({
+  id: z.string().min(1),
+  description: z.string().min(1),
+  constraint: z.string().min(1),
+  action: z.string().min(1),
+  role: z.string().optional(),
+  tools: z.array(z.string()).optional(),
+});
+export type PolicyConfig = z.infer<typeof policySchema>;
+
+export const workflowStepSchema = z.object({
+  step_id: z.string().min(1),
+  action: z.string().min(1),
+  policy_ref: z.string().optional(),
+  condition: z.string().optional(),
+  role_ref: z.string().optional(),
+});
+export type WorkflowStepConfig = z.infer<typeof workflowStepSchema>;
+
+export const workflowSchema = z.object({
+  name: z.string().min(1),
+  trigger: z.string().min(1),
+  steps: z.array(workflowStepSchema).min(1),
+});
+export type WorkflowDefinition = z.infer<typeof workflowSchema>;
+
+export const dnaSchema = z.object({
+  version: z.string().default('1.0'),
+  domain: z.string().min(1),
+  entities: z.array(entitySchema).default([]),
+  policies: z.array(policySchema).default([]),
+  workflows: z.array(workflowSchema).default([]),
+});
+export type DnaConfig = z.infer<typeof dnaSchema>;
+
+// ---------------------------------------------------------------------------
+// Compiled / AST output (strongly typed, no `any`)
+// ---------------------------------------------------------------------------
+
+export interface EntityNode {
+  type: 'Entity';
+  id: string;
+  payload: EntityConfig;
 }
 
-export interface ASTNode {
-    type: 'Entity' | 'Policy' | 'Workflow';
-    id: string;
-    payload: any;
+export interface PolicyNode {
+  type: 'Policy';
+  id: string;
+  payload: PolicyConfig;
+}
+
+export interface WorkflowNode {
+  type: 'Workflow';
+  id: string;
+  payload: WorkflowDefinition;
+}
+
+export type ASTNode = EntityNode | PolicyNode | WorkflowNode;
+
+export interface BusinessSemanticAST {
+  version: string;
+  domain: string;
+  nodes: ASTNode[];
+}
+
+// ---------------------------------------------------------------------------
+// Loading & validation
+// ---------------------------------------------------------------------------
+
+function validateReferences(dna: DnaConfig): void {
+  const policyIds = new Set(dna.policies.map((p) => p.id));
+  for (const wf of dna.workflows) {
+    for (const step of wf.steps) {
+      if (step.policy_ref && !policyIds.has(step.policy_ref)) {
+        throw new Error(
+          `Invalid Enterprise DNA: workflow "${wf.name}" step "${step.step_id}" references unknown policy "${step.policy_ref}"`,
+        );
+      }
+    }
+  }
+}
+
+export function parseDna(yamlContent: string): DnaConfig {
+  const raw = yaml.load(yamlContent) as unknown;
+  const parsed = dnaSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('; ');
+    throw new Error(`Invalid Enterprise DNA: ${issues}`);
+  }
+  validateReferences(parsed.data);
+  return parsed.data;
+}
+
+export function loadDna(yamlFilePath: string): DnaConfig {
+  const content = fs.readFileSync(yamlFilePath, 'utf8');
+  return parseDna(content);
 }
 
 export class Compiler {
-    /**
-     * Parses the Enterprise DNA YAML and converts it into a Business Semantic AST.
-     */
-    public compile(yamlFilePath: string): BusinessSemanticAST {
-        try {
-            const fileContents = fs.readFileSync(yamlFilePath, 'utf8');
-            const dna = yaml.load(fileContents) as any;
+  /**
+   * Loads, validates and compiles an Enterprise DNA file into a strongly
+   * typed Business Semantic AST. Invalid configuration throws instead of
+   * being passed through silently.
+   */
+  public compile(yamlFilePath: string): BusinessSemanticAST {
+    const dna = loadDna(yamlFilePath);
 
-            const ast: BusinessSemanticAST = {
-                version: dna.version || '1.0',
-                domain: dna.domain || 'Unknown',
-                nodes: []
-            };
+    const nodes: ASTNode[] = [
+      ...dna.entities.map(
+        (e): EntityNode => ({ type: 'Entity', id: `entity_${e.name.toLowerCase()}`, payload: e }),
+      ),
+      ...dna.policies.map(
+        (p): PolicyNode => ({ type: 'Policy', id: p.id, payload: p }),
+      ),
+      ...dna.workflows.map(
+        (w): WorkflowNode => ({ type: 'Workflow', id: `wf_${w.name.toLowerCase()}`, payload: w }),
+      ),
+    ];
 
-            // Parse Entities
-            if (dna.entities && Array.isArray(dna.entities)) {
-                dna.entities.forEach((entity: any) => {
-                    ast.nodes.push({
-                        type: 'Entity',
-                        id: `entity_${entity.name.toLowerCase()}`,
-                        payload: entity
-                    });
-                });
-            }
-
-            // Parse Policies
-            if (dna.policies && Array.isArray(dna.policies)) {
-                dna.policies.forEach((policy: any) => {
-                    ast.nodes.push({
-                        type: 'Policy',
-                        id: policy.id,
-                        payload: policy
-                    });
-                });
-            }
-
-            // Parse Workflows
-            if (dna.workflows && Array.isArray(dna.workflows)) {
-                dna.workflows.forEach((wf: any) => {
-                    ast.nodes.push({
-                        type: 'Workflow',
-                        id: `wf_${wf.name.toLowerCase()}`,
-                        payload: wf
-                    });
-                });
-            }
-
-            return ast;
-
-        } catch (e) {
-            console.error('Compilation failed:', e);
-            throw e;
-        }
-    }
-}
-
-// Simple CLI runner for prototype
-if (require.main === module) {
-    const defaultDnaPath = path.resolve(__dirname, '../../../examples/enterprise-dna-demo/expense-dna.yaml');
-    const inputPath = process.argv[2] || defaultDnaPath;
-
-    console.log(`[Compiler] Reading DNA from: ${inputPath}`);
-    const compiler = new Compiler();
-    const ast = compiler.compile(inputPath);
-
-    console.log('\n[Compiler] Generated Business Semantic AST:');
-    console.log(JSON.stringify(ast, null, 2));
+    return { version: dna.version, domain: dna.domain, nodes };
+  }
 }

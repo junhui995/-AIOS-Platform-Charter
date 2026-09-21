@@ -8,9 +8,7 @@
     "declarationMap": true
   },
   "references": [
-    { "path": "../compiler" },
-    { "path": "../tools" },
-    { "path": "../events" }
+    { "path": "../data-service" }
   ],
   "include": ["src/**/*"]
 }

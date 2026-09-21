@@ -1,8 +1,9 @@
 {
-  "name": "@aios/compiler",
+  "name": "@aios/events",
   "version": "1.0.0",
-  "description": "",
+  "description": "Event bus with Postgres outbox for the AIOS kernel",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit --composite false -p tsconfig.json",
@@ -13,11 +14,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "js-yaml": "^5.2.1",
-    "zod": "^3.23.0"
+    "@aios/data-service": "workspace:*"
   },
   "devDependencies": {
-    "@types/js-yaml": "^4.0.9"
-  },
-  "types": "dist/index.d.ts"
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  }
 }

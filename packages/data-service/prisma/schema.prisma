@@ -66,6 +66,7 @@ model Department {
   parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children  Department[] @relation("DepartmentHierarchy")
   positions Position[]
+  expenses  Expense[]
 }
 
 model Position {
@@ -112,6 +113,8 @@ model Employee {
   reviews         PerformanceReview[]
   PunchRecord     PunchRecord[]
   DailyAttendance DailyAttendance[]
+  expenses         Expense[] @relation("ExpenseOwner")
+  approvedExpenses Expense[] @relation("ExpenseApprover")
 }
 
 // Junction table for many-to-many relationship between Employee and Position
@@ -256,6 +259,31 @@ model LeaveBalance {
   updatedAt DateTime @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Finance Expense Domain
+// -----------------------------------------------------------------
+
+model Expense {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  employeeId   String
+  amount       Decimal  @db.Decimal(10, 2)
+  reason       String
+  departmentId String?
+  status       String   @default("SUBMITTED") // SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED
+  approvedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee   Employee    @relation("ExpenseOwner", fields: [employeeId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  approvedBy Employee?   @relation("ExpenseApprover", fields: [approvedById], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
 }
 
 // -----------------------------------------------------------------
@@ -590,6 +618,26 @@ model Invoice {
 
   contract     BusinessContract @relation(fields: [contractId], references: [id])
   counterparty Counterparty     @relation(fields: [counterpartyId], references: [id])
+}
+
+// -----------------------------------------------------------------
+// Event Outbox Domain
+// -----------------------------------------------------------------
+
+model OutboxEvent {
+  id         String    @id @default(uuid())
+  eventType  String
+  aggregate  String
+  aggregateId String
+  payload    Json
+  status     String    @default("PENDING") // PENDING, PUBLISHED, FAILED
+  attempts   Int       @default(0)
+  lastError  String?
+  createdAt  DateTime  @default(now())
+  publishedAt DateTime?
+
+  @@index([status])
+  @@index([eventType])
 }
 
 // -----------------------------------------------------------------

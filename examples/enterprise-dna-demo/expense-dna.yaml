@@ -12,6 +12,7 @@ policies:
     constraint: "amount > 500"
     action: "require_approval"
     role: "Finance Manager"
+    tools: ["autoApproveExpense", "approveExpense"]
 workflows:
   - name: "ExpenseApprovalWorkflow"
     trigger: "ExpenseCreated"

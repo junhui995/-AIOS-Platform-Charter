@@ -8,7 +8,8 @@
     "declarationMap": true
   },
   "references": [
-    { "path": "../data-service" }
+    { "path": "../data-service" },
+    { "path": "../events" }
   ],
   "include": ["src/**/*"]
 }

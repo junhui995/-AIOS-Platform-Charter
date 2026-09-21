@@ -71,7 +71,7 @@ async function main() {
     }
   });
 
-  const engPos = await prisma.position.create({
+  await prisma.position.create({
     data: {
       departmentId: engineering.id,
       code: 'POS-003',
@@ -99,7 +99,7 @@ async function main() {
     },
   });
 
-  const zhangsan = await prisma.employee.create({
+  await prisma.employee.create({
     data: {
       code: 'EMP-001',
       name: '张三',
@@ -110,6 +110,22 @@ async function main() {
       positions: {
         create: {
           positionId: hrPos.id
+        }
+      }
+    },
+  });
+
+  await prisma.employee.create({
+    data: {
+      code: 'EMP-002',
+      name: 'Alice',
+      phoneNumber: '13887654321',
+      email: 'alice@aios.local',
+      hireDate: new Date('2022-03-01'),
+      status: 'ACTIVE',
+      positions: {
+        create: {
+          positionId: adminPos.id
         }
       }
     },

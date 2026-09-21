@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\""
+    "typecheck": "tsc --noEmit --composite false -p tsconfig.json",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -13,8 +14,13 @@
   "type": "commonjs",
   "dependencies": {
     "@aios/compiler": "workspace:*",
+    "@aios/events": "workspace:*",
     "@aios/tools": "workspace:*",
     "openai": "^6.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7"
   },
   "types": "dist/index.d.ts"
 }

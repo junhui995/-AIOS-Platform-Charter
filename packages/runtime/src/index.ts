@@ -1,126 +1,214 @@
 import { OpenAI } from 'openai';
-import { tools as toolsDict, ToolDefinition } from '@aios/tools';
-import { BusinessSemanticAST, Compiler, ASTNode } from '@aios/compiler';
+import { ToolDefinition, ToolRegistry } from '@aios/tools';
+import { BusinessSemanticAST } from '@aios/compiler';
+import { PolicyGuard, GuardedResult, formatDecision } from './guard';
+import { PlanningAgent, PlanStep, parseRequest, fillTemplates, applyStepResult } from './planner';
+import { CheckpointSession, ExecutionContext, SessionStore } from './session';
 
+export interface RuntimeOptions {
+  registry?: ToolRegistry;
+  guard?: PolicyGuard;
+  sessionDir?: string;
+}
+
+export interface ExecuteResult {
+  session: CheckpointSession;
+  outcome: string;
+}
+
+/**
+ * AIOS Runtime Engine (Phase 2 — Orchestration Center).
+ *
+ * Deterministic half: a PlanningAgent turns the request into an ordered plan;
+ * a PolicyGuard adjudicates every tool call against the compiled DNA BEFORE
+ * it runs (ALLOW / DENY / REDIRECT). Each step is checkpointed to disk so an
+ * interrupted run can be resumed. When OPENAI_API_KEY is present the same
+ * guard pipeline wraps the model-driven loop.
+ */
 export class RuntimeEngine {
-    private openai: OpenAI | null;
-    private astContext: BusinessSemanticAST;
+  private openai: OpenAI | null;
+  private readonly registry: ToolRegistry;
+  private readonly guard: PolicyGuard;
+  private readonly planner = new PlanningAgent();
+  private readonly sessions: SessionStore;
+  private readonly astContext: BusinessSemanticAST;
 
-    constructor(ast: BusinessSemanticAST) {
-        this.astContext = ast;
-        const apiKey = process.env.OPENAI_API_KEY;
-        this.openai = apiKey ? new OpenAI({ apiKey }) : null;
-        if (!this.openai) {
-            console.warn('[Runtime] No OPENAI_API_KEY found. Engine will run in Mock Mode.');
-        }
+  constructor(ast: BusinessSemanticAST, options: RuntimeOptions = {}) {
+    this.astContext = ast;
+    this.registry = options.registry ?? new ToolRegistry();
+    this.guard = options.guard ?? new PolicyGuard(ast);
+    this.sessions = new SessionStore(options.sessionDir);
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    this.openai = apiKey ? new OpenAI({ apiKey }) : null;
+    if (!this.openai) {
+      console.warn('[Runtime] No OPENAI_API_KEY found. Engine will run in deterministic Plan+Guard mode.');
+    }
+  }
+
+  resume(sessionId: string): CheckpointSession | null {
+    return this.sessions.load(sessionId);
+  }
+
+  async execute(userRequest: string, options: { sessionId?: string } = {}): Promise<ExecuteResult> {
+    const parsed = parseRequest(userRequest);
+    console.log(`[System] Parsed intent: ${parsed.intent} (domain: ${parsed.domain})`);
+
+    if (parsed.intent === 'unknown' && this.openai) {
+      await this.agentLoop(userRequest);
+      return { session: this.sessions.create(options.sessionId, userRequest, 'unknown', this.astContext.version, []), outcome: 'agent_loop_finished' };
     }
 
-    public async execute(userRequest: string): Promise<void> {
-        console.log(`\n[Runtime] Processing request: "${userRequest}"`);
+    const plan = this.planner.plan(parsed, this.astContext);
+    const session = this.sessions.create(options.sessionId, userRequest, parsed.domain, this.astContext.version, plan);
+    console.log(`[PlanningAgent] Produced ${plan.length} step(s) for (${parsed.domain}).`);
+    this.sessions.save(session);
 
-        const policies = this.astContext.nodes.filter((n: ASTNode) => n.type === 'Policy');
-        const policyDescriptions = policies.map((p: ASTNode) => `- ${p.payload.description}`).join('\n');
+    await this.runPlan(session);
+    return { session, outcome: session.outcome ?? 'finished' };
+  }
 
-        const systemPrompt = `
-You are the AIOS Runtime Planner. Your job is to fulfill the user's request by calling the provided tools.
-You must strictly follow the enterprise policies:
+  async continueSession(sessionId: string): Promise<ExecuteResult> {
+    const session = this.sessions.load(sessionId);
+    if (!session) throw new Error(`No checkpoint found for session "${sessionId}"`);
+    await this.runPlan(session);
+    return { session, outcome: session.outcome ?? 'finished' };
+  }
+
+  // -------------------------------------------------------------------------
+  // Deterministic execution of a plan with per-step checkpoints
+  // -------------------------------------------------------------------------
+
+  private async runPlan(session: CheckpointSession): Promise<void> {
+    const ctx: ExecutionContext = {};
+
+    for (let index = 0; index < session.plan.length; index += 1) {
+      const step = session.plan[index] as PlanStep;
+      const previous = session.executed.find((e) => e.index === index);
+
+      if (previous) {
+        // Checkpoint replay: restore context from the recorded result,
+        // never re-run a tool for a step that already executed.
+        console.log(`\n[Checkpoint] Replaying step ${index + 1}/${session.plan.length}: ${step.tool} (ran at ${previous.at})`);
+        applyStepResult(ctx, step.tool, { ok: previous.result.ok, data: previous.result.data });
+        continue;
+      }
+
+      const args = fillTemplates(step.args, ctx) as Record<string, unknown>;
+      console.log(`\n[Agent Step] ${index + 1}/${session.plan.length}: ${step.tool} — ${step.reason}`);
+
+      const guarded = await this.guard.executeWithGuard(
+        this.registry,
+        step.tool,
+        args,
+        { actor: null, vars: { ...(step.facts ?? {}) } },
+      );
+      console.log(`[Guard] ${formatDecision(guarded.decision)}`);
+      console.log(`[Tool Result] ${JSON.stringify(guarded.result)}`);
+
+      session.executed.push({
+        index,
+        tool: step.tool,
+        args,
+        decision: guarded.decision,
+        result: guarded.result,
+        at: new Date().toISOString(),
+      });
+
+      applyStepResult(ctx, step.tool, guarded.result);
+      this.sessions.save(session);
+    }
+
+    session.outcome = this.summarize(session);
+    this.sessions.save(session);
+    console.log(`\n[Agent Response] ${session.outcome}`);
+  }
+
+  private summarize(session: CheckpointSession): string {
+    const redirects = session.executed.filter((e) => e.decision.decision === 'REDIRECT');
+    if (redirects.length > 0) {
+      const first = redirects[0] as ExecutedStepLike;
+      const policyId = 'policyId' in first.decision ? first.decision.policyId : undefined;
+      return `The action was intercepted by policy ${policyId ?? '(policy)'} and routed to a Finance Manager for human approval.`;
+    }
+
+    const last = session.executed[session.executed.length - 1];
+    if (!last) return 'No steps were executed.';
+
+    if (last.tool === 'autoApproveExpense') {
+      return `Expense approved automatically (compliant with policy).`;
+    }
+    if (last.tool === 'submitLeaveRequest') {
+      return `Leave request submitted successfully for the employee.`;
+    }
+    return `Finished ${session.executed.length} step(s) with ${last.tool}.`;
+  }
+
+  // -------------------------------------------------------------------------
+  // Model-driven agent loop (optional, wrapped by the same PolicyGuard)
+  // -------------------------------------------------------------------------
+
+  private async agentLoop(userRequest: string): Promise<void> {
+    if (!this.openai) return;
+
+    const policies = this.astContext.nodes.filter((n) => n.type === 'Policy');
+    const policyDescriptions = policies.map((p) => `- ${p.payload.description}`).join('\n');
+
+    const systemPrompt = `
+You are the AIOS Runtime Planner. Fulfill the user's request by calling the provided tools.
+A deterministic PolicyGuard will intercept and enforce the following enterprise policies:
 ${policyDescriptions}
-
-If an expense amount is > 500, you must NOT autoApproveExpense. You must use requestFinanceApproval.
-First, find the employee ID if only the name is given. Then create the expense. Then evaluate the policy to either auto approve or request finance approval.
+If the guard redirects you, follow its instruction.
 `;
 
-        if (!this.openai) {
-            return this.mockExecution(userRequest);
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userRequest },
+    ];
+
+    const toolsArray: OpenAI.Chat.ChatCompletionTool[] = this.registry.list().map((tool: ToolDefinition) => ({
+      type: 'function',
+      function: { name: tool.name, description: tool.description, parameters: tool.inputSchema },
+    }));
+
+    let isDone = false;
+    while (!isDone) {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages,
+        tools: toolsArray,
+      });
+
+      const message = response.choices[0]?.message;
+      if (!message) break;
+      messages.push(message);
+
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        for (const toolCall of message.tool_calls) {
+          if (toolCall.type !== 'function') continue;
+          const toolName = toolCall.function.name;
+          let args: unknown = {};
+          try {
+            args = JSON.parse(toolCall.function.arguments);
+          } catch {
+            // keep empty args
+          }
+
+          console.log(`\n[Agent Action] Intends to call: ${toolName}`);
+          console.log(`[Agent Action] Arguments: ${JSON.stringify(args)}`);
+
+          const guarded: GuardedResult = await this.guard.executeWithGuard(this.registry, toolName, args, { actor: null });
+          console.log(`[Guard] ${formatDecision(guarded.decision)}`);
+          console.log(`[Tool Result] ${JSON.stringify(guarded.result)}`);
+
+          messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(guarded.result) });
         }
-
-        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userRequest }
-        ];
-
-        const toolsArray: OpenAI.Chat.ChatCompletionTool[] = Object.values(toolsDict).map((t: unknown) => {
-            const tool = t as ToolDefinition;
-            return {
-                type: 'function',
-                function: {
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.schema
-                }
-            };
-        });
-
-        console.log('[Runtime] Starting Agent Execution Loop...');
-        let isDone = false;
-
-        while (!isDone) {
-            const response = await this.openai.chat.completions.create({
-                model: 'gpt-4o',
-                messages: messages,
-                tools: toolsArray
-            });
-
-            const choice = response.choices[0];
-            const message = choice.message;
-            messages.push(message);
-
-            if (message.tool_calls && message.tool_calls.length > 0) {
-                for (const toolCall of message.tool_calls) {
-                    if (toolCall.type !== 'function') continue;
-
-                    console.log(`\n[Agent Action] Intends to call: ${toolCall.function.name}`);
-                    console.log(`[Agent Action] Arguments: ${toolCall.function.arguments}`);
-
-                    const tool = toolsDict[toolCall.function.name];
-                    if (tool) {
-                        try {
-                            const args = JSON.parse(toolCall.function.arguments);
-                            const result = await tool.execute(args);
-                            console.log(`[Tool Result] ${JSON.stringify(result)}`);
-
-                            messages.push({
-                                role: 'tool',
-                                tool_call_id: toolCall.id,
-                                content: JSON.stringify(result)
-                            });
-                        } catch (e: any) {
-                            console.log(`[Tool Error] ${e.message}`);
-                            messages.push({
-                                role: 'tool',
-                                tool_call_id: toolCall.id,
-                                content: JSON.stringify({ error: e.message })
-                            });
-                        }
-                    } else {
-                        console.log(`[Tool Error] Tool ${toolCall.function.name} not found.`);
-                        messages.push({
-                            role: 'tool',
-                            tool_call_id: toolCall.id,
-                            content: JSON.stringify({ error: `Tool ${toolCall.function.name} not found.` })
-                        });
-                    }
-                }
-            } else {
-                console.log(`\n[Agent Response] ${message.content}`);
-                isDone = true;
-            }
-        }
+      } else {
+        console.log(`\n[Agent Response] ${message.content}`);
+        isDone = true;
+      }
     }
-
-    private async mockExecution(userRequest: string): Promise<void> {
-        console.log('[Mock Agent] Analyzing intent: Leave request for Zhang San.');
-
-        console.log('[Mock Agent] Step 1: Getting Employee ID for "张三"');
-        const emp = await toolsDict.getEmployeeIdByName.execute({ name: '张三' });
-        console.log(`[Tool Result] ${JSON.stringify(emp)}`);
-
-        if (emp.id) {
-            console.log('[Mock Agent] Step 2: Creating Leave Request');
-            const req = await toolsDict.submitLeaveRequest.execute({ employeeId: emp.id, leaveType: 'ANNUAL', startDate: '2026-08-01', endDate: '2026-08-02' });
-            console.log(`[Tool Result] ${JSON.stringify(req)}`);
-
-            console.log(`\n[Agent Response] I have created leave request ${req.requestId} for 张三.`);
-        }
-    }
+  }
 }
+
+type ExecutedStepLike = { decision: { policyId?: string } };

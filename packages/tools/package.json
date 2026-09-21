@@ -5,14 +5,16 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\""
+    "typecheck": "tsc --noEmit --composite false -p tsconfig.json",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@aios/data-service": "workspace:*"
+    "@aios/data-service": "workspace:*",
+    "@aios/events": "workspace:*"
   },
   "types": "dist/index.d.ts",
   "devDependencies": {

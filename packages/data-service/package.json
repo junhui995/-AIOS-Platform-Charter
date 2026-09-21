@@ -6,7 +6,8 @@
   "scripts": {
     "build": "pnpm run generate && tsc",
     "generate": "prisma generate",
-    "test": "echo \"Error: no test specified\"",
+    "typecheck": "tsc --noEmit --composite false -p tsconfig.json",
+    "test": "vitest run",
     "seed": "ts-node src/seed.ts"
   },
   "keywords": [],
