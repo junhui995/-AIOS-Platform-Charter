@@ -16,6 +16,11 @@ import { outboxRepository, prisma } from '@aios/data-service';
  */
 
 async function main(): Promise<void> {
+  // Keep the demo idempotent: clear rows produced by previous runs.
+  await prisma.outboxEvent.deleteMany({
+    where: { OR: [{ aggregateId: { startsWith: 'exp-demo-' } }, { aggregateId: { startsWith: 'lr-demo-' } }] },
+  });
+
   console.log('[Demo] Publishing 3 domain events (Postgres outbox available)...\n');
 
   await eventBus.publish({
