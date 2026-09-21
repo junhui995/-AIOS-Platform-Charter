@@ -61,6 +61,23 @@ describe('EventBus', () => {
     expect(mockMarkFailed).not.toHaveBeenCalled();
   });
 
+  it('does not double-deliver from the buffer when the outbox is available', async () => {
+    mockCreate.mockResolvedValueOnce({ id: 'x' });
+    mockClaimNext.mockResolvedValueOnce([record('3', EventTypes.EXPENSE_CREATED)]);
+    const bus = new EventBus();
+    const handler = vi.fn();
+    bus.subscribe(EventTypes.EXPENSE_CREATED, handler);
+
+    await bus.publish({ eventType: EventTypes.EXPENSE_CREATED, aggregate: 'Expense', aggregateId: 'e-1', payload: {} });
+    const dispatched = await bus.dispatchOnce();
+
+    // Publish while the DB is up must not also deliver via the buffer:
+    // exactly the one durable claimed record is delivered.
+    expect(dispatched).toBe(1);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(mockMarkPublished).toHaveBeenCalledWith('3');
+  });
+
   it('marks an event FAILED when its handler throws', async () => {
     mockClaimNext.mockResolvedValueOnce([record('2', EventTypes.TOOL_CALLED)]);
     const bus = new EventBus();

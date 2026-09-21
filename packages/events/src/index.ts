@@ -84,11 +84,16 @@ export class EventBus {
   async dispatchOnce(): Promise<number> {
     let dispatched = 0;
 
-    // 1. Drain the in-memory buffer (events published while DB was down).
-    while (this.queue.length > 0) {
-      const env = this.queue.shift() as Envelope;
-      await this.deliver(this.toDomainEvent(env));
-      dispatched += 1;
+    // 1. Drain the in-memory buffer ONLY if the outbox was down when the
+    //    events were published. When the database is up the events are
+    //    already durable in the outbox table, so draining here would
+    //    double-deliver them.
+    if (this.outboxDown) {
+      while (this.queue.length > 0) {
+        const env = this.queue.shift() as Envelope;
+        await this.deliver(this.toDomainEvent(env));
+        dispatched += 1;
+      }
     }
 
     // 2. Claim durable outbox records and deliver them.
