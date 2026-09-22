@@ -7,7 +7,7 @@ import {
   Home, Users, FileText, Settings,
   PieChart, Sparkles,
   Network, Workflow, BarChart3, Calculator, Smartphone,
-  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge
+  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge, Receipt
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -30,6 +30,7 @@ export default function Sidebar() {
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">员工自助 (Self-Service)</div>
         <NavItem href="/my/leave" icon={<UserRound size={18} />} label="我的假期" active={isAct('/my/leave')} />
+        <NavItem href="/my/expenses" icon={<Receipt size={18} />} label="我的报销" active={isAct('/my/expenses')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">核心人事 (HR)</div>
         <NavItem href="/org/structure" icon={<Network size={18} />} label="组织架构" active={isAct('/org/structure')} />

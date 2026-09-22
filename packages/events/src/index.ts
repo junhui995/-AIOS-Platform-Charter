@@ -154,6 +154,7 @@ export const EventTypes = {
   EXPENSE_APPROVED: 'ExpenseApproved',
   EXPENSE_REJECTED: 'ExpenseRejected',
   EXPENSE_APPROVAL_REQUIRED: 'ExpenseApprovalRequired',
+  EXPENSE_CANCELLED: 'ExpenseCancelled',
   TOOL_CALLED: 'ToolCalled',
   PROCESS_INSTANCE_STARTED: 'ProcessInstanceStarted',
   PROCESS_TASK_CREATED: 'ProcessTaskCreated',

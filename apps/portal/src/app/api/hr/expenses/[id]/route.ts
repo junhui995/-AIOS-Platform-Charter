@@ -67,3 +67,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+/** Employee self-service: withdraw a pending expense and cancel its approval flow. */
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+
+    const instance = await workflowRepository.findInstanceByFormField('expenseId', id);
+    if (instance) {
+      await workflowRepository.cancelPendingTasks(instance.id);
+      await workflowRepository.cancelInstance(instance.id);
+    }
+
+    await expenseRepository.deletePending(id);
+    await eventBus.publish({
+      eventType: EventTypes.EXPENSE_CANCELLED,
+      aggregate: 'Expense',
+      aggregateId: id,
+      payload: { expenseId: id, processInstanceId: instance?.id ?? null, decision: 'DELETED' },
+    });
+
+    return NextResponse.json({ deleted: true, instanceId: instance?.id ?? null });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to delete expense';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

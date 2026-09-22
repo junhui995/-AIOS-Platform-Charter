@@ -341,3 +341,57 @@ apps/portal/src/instrumentation.ts                      (新：调度器 + 播�
 apps/portal/next.config.mjs                             (instrumentationHook)
 docs/batch1-hr-closure-acceptance.md                    (本文件)
 ```
+
+---
+
+# Batch 2（主流程）— 报销自助闭环
+
+日期：2026-09-22
+决策：回到主开发流程，用户选择「报销自助闭环」为下一阶段（1.1 延后项的补全）。
+
+## 23. 交付内容
+- Schema：`Expense` 增加 `category String?`（TRAVEL/TAXI/MEAL/OFFICE/OTHER）与 `occurredOn DateTime?`
+  （票据日期）；`db push` 已应用（无数据丢失）。
+- 数据层 `packages/data-service/src/repositories/expense.ts`：
+  - `createPending()`（直接以 PENDING_APPROVAL 落单，进入审批态，含 category/occurredOn）。
+  - `deletePending()`（事务内仅允许撤销 SUBMITTED/PENDING_APPROVAL）。
+  - `registry.ts` 报销实体补 `category`、`occurredOn` 字段（规则引擎可用）。
+- 事件 `@aios/events`：新增 `EXPENSE_CANCELLED`。
+- API：
+  - `POST /api/hr/expenses`（新）：员工端提交 —— 校验金额>0/事由必填/类别白名单 → `createPending`
+    → 立即 `startApprovalProcess(EXPENSE)` 启动 BPM → 发布 `ExpenseCreated`；返回
+    `{expense, instanceId, state}`(201)。
+  - `DELETE /api/hr/expenses/[id]`（新）：员工自助撤销 —— 取消 BPM 实例与待办 → `deletePending`
+    → 发布 `ExpenseCancelled`。
+  - 审批沿用 `PATCH /api/hr/expenses/[id]`（APPROVE=已入账 / REJECT=已驳回）；`GET` 读时对账保留为兜底。
+- 页面 `apps/portal/src/app/my/expenses/page.tsx`（新，client）：
+  - 提交表单：报销类别 / 票据日期 / 金额 / 事由，「提交并启动审批流」。
+  - 汇总卡：审批中 / 已入账 / 已驳回 / 累计到账金额。
+  - 记录表：单号 / 类别 / 金额 / 票据日期 / 事由 / 状态徽章（审批中·已入账·已驳回）/ 未决单可「撤销」。
+- Sidebar「员工自助」新增「我的报销」（/my/expenses，Receipt 图标）。
+
+## 24. 实测记录（dev:3000）
+- `POST /api/hr/expenses`（EMP-002，TRAVEL，232.50，票据2026-09-18）→ 201
+  `{expense{category:TRAVEL, occurredOn:2026-09-18, status:PENDING_APPROVAL}, instanceId:c75decc0…, state:create+workflow}`。
+- `GET /api/hr/expenses?employeeId=EMP-002` → 新单带 `processInstanceId`（对账命中已开实例，不重复开）。
+- `PATCH [id] {action:APPROVE}` → `status:APPROVED, taskCompleted:true`（BPM 任务完成 + 事件发布）。
+- 撤销链路：新建一条 MEAL 15 元 → `DELETE` → `{deleted:true, instanceId:…}`，后 GET 已无该单。
+- `GET /aios/my/expenses` → 200，SSR 命中「我的报销 (Self-Service) / 发起报销申请 / 暂无报销记录」，
+  侧边栏含 /my/expenses。
+
+## 25. 门禁
+- pnpm test 49/49；pnpm -r typecheck 6/6；next lint（portal）0；data-service tsc 构建通过。
+
+## 26. 本次涉及文件
+```
+packages/data-service/prisma/schema.prisma (Expense +category/+occurredOn)
+packages/data-service/src/repositories/expense.ts  (createPending / deletePending)
+packages/data-service/src/repositories/registry.ts (报销实体新字段)
+packages/events/src/index.ts                        (EXPENSE_CANCELLED)
+apps/portal/src/app/api/hr/expenses/route.ts        (POST 提交即进 BPM)
+apps/portal/src/app/api/hr/expenses/[id]/route.ts   (DELETE 撤销)
+apps/portal/src/app/my/expenses/page.tsx            (新：我的报销)
+apps/portal/src/components/layout/Sidebar.tsx       (员工自助 + 我的报销)
+docs/batch1-hr-closure-acceptance.md                (本文件)
+```
+提交：本地提交（未 push，遵守用户指示）。

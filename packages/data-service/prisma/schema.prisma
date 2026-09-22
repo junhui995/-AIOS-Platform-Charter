@@ -271,6 +271,8 @@ model Expense {
   employeeId   String
   amount       Decimal  @db.Decimal(10, 2)
   reason       String
+  category     String? // 报销类别: TRAVEL, TAXI, MEAL, OFFICE, OTHER
+  occurredOn   DateTime? // 票据 / 发生日期
   departmentId String?
   status       String   @default("SUBMITTED") // SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED
   approvedById String?
