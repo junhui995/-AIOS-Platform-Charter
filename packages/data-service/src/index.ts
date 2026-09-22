@@ -20,3 +20,6 @@ export * from './repositories/performance';
 export * from './repositories/workflow';
 export * from './repositories/expense';
 export * from './repositories/alert';
+export * from './repositories/ruleEngine';
+export * from './repositories/registry';
+export * from './repositories/monitor';

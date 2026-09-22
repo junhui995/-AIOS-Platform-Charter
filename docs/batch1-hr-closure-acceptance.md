@@ -202,3 +202,103 @@ apps/portal/src/components/layout/Sidebar.tsx          (员工自助分组)
 docs/batch1-hr-closure-acceptance.md                   (本文件)
 ```
 提交：本地提交（未 push，遵守用户指示）。
+
+---
+
+# Batch 2 阶段 A — 监控规则引擎（后端先行）
+
+日期：2026-09-22
+决策：用户确认「后端先行」推进规则引擎大改造；本文档记阶段 A（数据模型 + DSL + registry + 调度 + API），
+弹窗 UI（字段树/公式编辑器/渠道配置）为阶段 B，钉钉/企业微信适配器为阶段 C，均留待后续。
+
+## 10. 需求收敛（用户定义 ≈80%，缺口已补）
+- 用户原始：多行规则列表；每行=调度/时间 + 监控事项（任意表单任意字段，图形化字段选择）+
+  公式触发条件 + 报警内容（带日志）+ 渠道（站内 / 钉钉 / 企业微信）。
+- 补齐的设计缺口：行级 vs 聚合触发语义、时间窗口（now / daysUntil / daysSince）、
+  Delta 游标（RuleRunLog.cursor 预留）、AND/OR + 类型校验、幂等与 10s 防重跑、
+  渠道模板 + 重试/合并/升级（MonitorRuleAction 预留）、DSL 白名单函数沙箱（禁 eval）、
+  RuleRunLog / NotificationLog 双日志与恢复通知、表单字段 registry。
+
+## 11. 数据模型（schema.prisma 追加，`prisma db push` 已应用）
+- `MonitorRule`：code(unique)/name/module/level/enabled/target/scopeFilter(Json?)/
+  conditionExpr/schedule(Json {kind, minutes?, at?})/version/lastRunAt/createdBy/updatedBy。
+- `MonitorRuleAction`：ruleId(级联)/channel(inapp|email|dingtalk|wecom|webhook)/template/throttleSec/enabled。
+- `RuleRunLog`：ruleId(级联)/ranAt/scanned/hit/raised/skipped/durationMs/status/cursor(Json?)/error。
+- `NotificationLog`：ruleId?/channel/alertId?/target/ok/error/sentAt。
+- 无 migrations 目录，沿用 `prisma db push`；改 schema 后需先停 dev 再 build（DLL EPERM）。
+
+## 12. DSL 与字段 registry
+- `repositories/ruleEngine.ts`（新）：词法 + Pratt 解析 + 沙箱求值。
+  字段 `@path`（hasOwnProperty 逐段取值，阻止 `__proto__`/`constructor` 原型探测）；
+  运算符 `== != > >= < <= && || ! + - * / %`；`null` 字面量（`== null` 判缺失）；
+  函数 now/daysUntil/daysSince/date/int/string/len/upper/lower/contains/startsWith/
+  endsWith/abs/round；短路求值；非法表达式 `parseCondition` 返回 `{ok:false,error}`。
+  导出 `parseCondition/compileCondition/evaluateCondition/renderTemplate({{field}})`。
+- `repositories/registry.ts`（新）：`entityRegistry` 五实体（laborContract/employee/
+  leaveRequest/expense/dailyAttendance），字段名/中文标签/类型/derived，供 UI 字段树与校验用。
+- 注意：registry 与实际表字段已对齐（Employee 无 department 关系 → 无 departmentName；
+  Expense 无 category/date → 用 amount(Number)/reason/createdAt）。
+
+## 13. Repository 与调度
+- `repositories/monitor.ts`（新）：`monitorRepository`：
+  listRules/getRule/createRule/updateRule/deleteRule/listRunLogs/runRule/runDueRules/seedDefaultRules；
+  派生字段（daysRemaining/daysToProbationEnd/days）由 fetchTargetRows 计算后求值；
+  命中按 `(type=rule.code, relatedObjectId, status pending|processing)` 对 Alert 去重（幂等）；
+  NotificationLog：inapp 直落 ok=true，外部渠道 ok=false 标注「外部渠道适配器待接入（Phase C）」；
+  同一规则 10s 内重复 run 返回 `status:'cancelled'` 防双触发。
+- 播种：`seedDefaultRules()` 幂等（code 判存在）内置 RULE-CONTRACT-EXPIRY /
+  RULE-PROBATION-EXPIRY / RULE-ATTENDANCE-ANOMALY（与原 alert.ts 三规则镜像）。
+- 调度：`apps/portal/src/instrumentation.ts`（新，nodejs 运行时启动时注册）+ `next.config.mjs`
+  开 `instrumentationHook`：启动播种 + 每 60s `runDueRules()`（schedule = interval|dailyAt|manual，isDue 判定）。
+- 注：schema 已含 MonitorRule/… 四表，**无数据迁移文件**，符合仓库 db push 惯例。
+
+## 14. Portal API
+```
+GET  /api/monitor/rules                    -> { rules, summary:{total,enabled,lastRunAt,openAlerts} }
+POST /api/monitor/rules                    -> 建规则（body 含 code/name/module/level/target/
+                                             scopeFilter/conditionExpr/schedule/actions，校验 DSL）
+PATCH /api/monitor/rules/[id]              -> 更新（scopeFilter:null 置 Prisma.JsonNull 清空）
+DELETE /api/monitor/rules/[id]             -> 删除（级联清 actions/runLogs）
+POST /api/monitor/rules/[id]/run           -> 立即运行，返回 RuleRunSummary
+GET  /api/monitor/rules/[id]/logs?take=N   -> 运行日志（RuleRunLog 倒序）
+GET  /api/monitor/registry                 -> entityRegistry（字段树/公式编辑器数据源）
+```
+
+## 15. 实测记录（本机 → 远程 DB / dev:3000）
+- seed：`SEED ["RULE-CONTRACT-EXPIRY:created","RULE-PROBATION-EXPIRY:created","RULE-ATTENDANCE-ANOMALY:created"]`；dev 重启 seed 幂等 `:exists`。
+- node 直调：RULE-PROBATION-EXPIRY run → `scanned:1,hit:0`（张三试用期 >90 天，正常不触发）；
+  10s 内重跑 → `status:'cancelled'`。
+- 命中路径（临时规则 `@code == "EMP-002"`）：`scanned:3,hit:1,raised:1`；Alert(relatedObjectId=EMP-002, pending)
+  + NotificationLog(inapp ok:true, 绑定 alertId)；重跑 cancelled；删除规则后级联清理。
+- HTTP 全链路：POST /rules(201) → run(`scanned:3,hit:0`) → logs(200) → PATCH(200) → DELETE(200)。
+  测试遗留 Alert(RULE-TEST-TMP) 与无主 NotificationLog 已清理，库中现有 3 条内置规则。
+- 调度：dev 日志 `[monitor] scheduler registered (tick every 60s)`。
+
+## 16. 门禁
+- `pnpm -r run typecheck` 6/6 通过；`pnpm test` 8 文件 / **49 用例全过**（新增 ruleEngine.test.ts 9 项）；
+  `next lint`（portal）0 问题。
+- 提交：本地提交（未 push，遵守用户指示）。
+
+## 17. 阶段 B / C 待办
+- B：`/hr/rules`（或弹窗）弹窗令——规则多行列表 + 编辑抽屉：字段树（entityRegistry）点选注入公式、
+  调度(interval/dailyAt/manual)、报警内容模板、渠道多选（inapp/钉钉/企业微信）、最近运行与日志预览、启停。
+- C：dingtalk / wecom 渠道适配器（MonitorRuleAction.template + webhook/ robot HTTP），替换 ok=false 标注。
+- 其余：聚合/Delta 游标后续规则可能用到；RunLog 保留 cursor 字段暂未写入。
+
+## 18. 本次涉及文件
+```
+packages/data-service/prisma/schema.prisma              (4 新模型；db push 已应用)
+packages/data-service/src/repositories/ruleEngine.ts    (新：DSL 沙箱 + 模板插值)
+packages/data-service/src/repositories/ruleEngine.test.ts(新：9 用例)
+packages/data-service/src/repositories/registry.ts      (新：字段目录)
+packages/data-service/src/repositories/monitor.ts       (新：monitorRepository + 播种 + fetchTargetRows)
+packages/data-service/src/index.ts                      (导出 ruleEngine/registry/monitor)
+apps/portal/src/app/api/monitor/rules/route.ts          (新)
+apps/portal/src/app/api/monitor/rules/[id]/route.ts     (新)
+apps/portal/src/app/api/monitor/rules/[id]/run/route.ts (新)
+apps/portal/src/app/api/monitor/rules/[id]/logs/route.ts(新)
+apps/portal/src/app/api/monitor/registry/route.ts       (新)
+apps/portal/src/instrumentation.ts                      (新：调度器 + 播种)
+apps/portal/next.config.mjs                             (instrumentationHook)
+docs/batch1-hr-closure-acceptance.md                    (本文件)
+```

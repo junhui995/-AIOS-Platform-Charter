@@ -660,3 +660,70 @@ model Alert {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+// -----------------------------------------------------------------
+// Monitoring Rule Engine (phase A: backend-first)
+// -----------------------------------------------------------------
+
+model MonitorRule {
+  id           String   @id @default(uuid())
+  code         String   @unique // e.g. RULE-CONTRACT-EXPIRY
+  name         String
+  module       String // hr, finance, ops ...
+  level        String   @default("medium") // high, medium, low
+  enabled      Boolean  @default(true)
+
+  target       String // registry entity key, e.g. laborContract, leaveRequest
+  scopeFilter  Json? // optional static filter applied at query time
+  conditionExpr String  // DSL: field refs + operators + pure functions, evaluated per record
+  schedule     Json // { kind: "interval", minutes: N } | { kind: "dailyAt", at: "HH:mm" } | { kind: "manual" }
+  version      Int      @default(1)
+
+  createdBy  String?
+  updatedBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lastRunAt  DateTime?
+  actions    MonitorRuleAction[]
+  runs       RuleRunLog[]
+}
+
+model MonitorRuleAction {
+  id          String   @id @default(uuid())
+  ruleId      String
+  rule        MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  channel     String // inapp, email, dingtalk, wecom, webhook
+  template    String // message template, supports {{field}} interpolation
+  throttleSec Int      @default(0) // min gap between sends for the same related object
+  enabled     Boolean  @default(true)
+}
+
+model RuleRunLog {
+  id         String   @id @default(uuid())
+  ruleId     String
+  rule       MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  ranAt      DateTime @default(now())
+  scanned    Int      @default(0)
+  hit        Int      @default(0)
+  raised     Int      @default(0)
+  skipped    Int      @default(0)
+  durationMs Int      @default(0)
+  status     String // ok, error, cancelled
+  cursor     Json?
+  error      String?
+}
+
+model NotificationLog {
+  id         String   @id @default(uuid())
+  ruleId     String?
+  channel    String // inapp, email, dingtalk, wecom, webhook
+  alertId    String?
+  target     String? // relatedObjectId or subject
+  ok         Boolean
+  error      String?
+  sentAt     DateTime @default(now())
+}
