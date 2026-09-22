@@ -280,10 +280,49 @@ GET  /api/monitor/registry                 -> entityRegistry（字段树/公式�
 - 提交：本地提交（未 push，遵守用户指示）。
 
 ## 17. 阶段 B / C 待办
-- B：`/hr/rules`（或弹窗）弹窗令——规则多行列表 + 编辑抽屉：字段树（entityRegistry）点选注入公式、
-  调度(interval/dailyAt/manual)、报警内容模板、渠道多选（inapp/钉钉/企业微信）、最近运行与日志预览、启停。
-- C：dingtalk / wecom 渠道适配器（MonitorRuleAction.template + webhook/ robot HTTP），替换 ok=false 标注。
+- C：dingtalk / wecom 渠道适配器（MonitorRuleAction.template + webhook / robot HTTP），替换 ok=false 标注。
 - 其余：聚合/Delta 游标后续规则可能用到；RunLog 保留 cursor 字段暂未写入。
+
+---
+
+# Batch 2 阶段 B — 规则引擎 UI（独立页 /hr/rules + 抽屉二级面板）
+
+日期：2026-09-22
+决策：用户确认采用「独立页面 /hr/rules」+「抽屉内二级面板」（点行滑出配置面板，列表常显）。
+
+## 19. 交付内容
+- 页面 `apps/portal/src/app/hr/rules/page.tsx`（新，client）：规则多行列表（名称/code / 级别 / 监控事项 /
+  调度 / 最近运行 / 待处理预警数 / 启停开关 / 编辑），头部汇总卡（总数 / 启用中 / 最近运行 / 待处理预警）、
+  「新建规则」「刷新」；数据来自 `GET /api/monitor/rules`（含 summary.openAlerts 按 code 汇总）。
+- 二级配置面板 `apps/portal/src/components/rules/RuleDrawer.tsx`（新，宽 720px 右滑抽屉）：
+  - 配置 Tab：基本信息（code/name/module/级别/启停）、监控事项（registry 实体下拉）、
+    公式触发条件（字段树 chips 点击注入 `@field` + textarea + 「检查语法」）、
+    调度（每日定时 / 每隔多久 / 仅手动）、高级数据范围（scopeFilter JSON，编辑留空=清空）、
+    报警渠道与内容（inapp/钉钉/企微多选 + `{{field}}` chips 注入模板）。
+  - 运行日志 Tab：「立即运行」按钮 + 最近一次结果卡（扫描/命中/新增/跳过）+ 日志表（RuleRunLog 倒序 20 条）。
+  - 新建 = POST /api/monitor/rules；编辑 = PATCH；删除（二次确认）；`scopeFilter:null` 清空过滤。
+- 语法检查端点 `apps/portal/src/app/api/monitor/validate/route.ts`（新）：POST `{conditionExpr}`
+  → `{ok}` 或 `{ok:false,error}`（复用后端 DSL parseCondition，客户端不引 data-service 避免打包 Prisma）。
+- Sidebar「预警与洞察」新增「规则引擎」（/hr/rules，Gauge 图标）。
+
+## 20. 实测记录（dev:3000）
+- `GET /aios/hr/rules` → 200，SSR 含标题与侧边栏入口。
+- `POST /api/monitor/validate`：合法 `@daysRemaining <= 60 && @daysRemaining > 0` → `{ok:true}`；
+  非法 `@amount ++ 5` → `{ok:false,error:"Unexpected token\"+\" at 9"}`。
+- CRUD/run/logs 链路沿用阶段 A 已验证的 API；抽屉生成 payload 结构一致（actions 按所选渠道映射）。
+
+## 21. 门禁
+- `pnpm --filter @aios/portal typecheck` 0 问题；`next lint`（portal）0 问题。
+
+## 22. 本次涉及文件
+```
+apps/portal/src/app/hr/rules/page.tsx                 (新：规则列表页)
+apps/portal/src/components/rules/RuleDrawer.tsx      (新：二级配置/日志抽屉)
+apps/portal/src/app/api/monitor/validate/route.ts    (新：语法检查)
+apps/portal/src/components/layout/Sidebar.tsx        (预警与洞察 + 规则引擎)
+docs/batch1-hr-closure-acceptance.md                 (本文件)
+```
+提交：本地提交（未 push，遵守用户指示）。
 
 ## 18. 本次涉及文件
 ```

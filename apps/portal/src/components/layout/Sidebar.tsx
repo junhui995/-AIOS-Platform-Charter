@@ -7,7 +7,7 @@ import {
   Home, Users, FileText, Settings,
   PieChart, Sparkles,
   Network, Workflow, BarChart3, Calculator, Smartphone,
-  CalendarDays, Wallet, ShieldAlert, UserRound
+  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -40,6 +40,7 @@ export default function Sidebar() {
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">预警与洞察</div>
         <NavItem href="/hr/alerts" icon={<ShieldAlert size={18} />} label="预警中心" active={isAct('/hr/alerts')} />
+        <NavItem href="/hr/rules" icon={<Gauge size={18} />} label="规则引擎" active={isAct('/hr/rules')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">薪酬绩效 (C&B)</div>
         <NavItem href="/hr/attendance" icon={<PieChart size={18} />} label="考勤中心" active={isAct('/hr/attendance')} />
