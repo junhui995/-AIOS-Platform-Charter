@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, BellRing, CheckCircle2, Zap, AlertTriangle, Info } from "lucide-react";
+import { ShieldAlert, BellRing, CheckCircle2, Zap, AlertTriangle, Info, SearchCheck } from "lucide-react";
 
 interface AlertRow {
   id: string;
@@ -24,6 +24,21 @@ interface Counts {
   byLevel: Record<string, number>;
 }
 
+interface RuleRunDetail {
+  rule: string;
+  scanned: number;
+  hit: number;
+  raised: number;
+  skipped: number;
+}
+
+interface RunResult {
+  raised: number;
+  skipped: number;
+  ranAt: string;
+  rules: RuleRunDetail[];
+}
+
 const TYPE_LABELS: Record<string, string> = {
   contractExpiry: '合同到期', probationExpiry: '试用期到期', attendanceAnomaly: '考勤异常',
   overduePayment: '逾期付款', budgetOverrun: '预算超支',
@@ -41,6 +56,8 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState({ type: '', level: '', status: '' });
   const [running, setRunning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const refresh = useCallback((filters = filter) => {
     const qs = new URLSearchParams(
@@ -56,9 +73,15 @@ export default function AlertsPage() {
 
   const run = async () => {
     setRunning(true);
+    setRunError(null);
     try {
-      await fetch('/api/alerts', { method: 'POST' });
+      const res = await fetch('/api/alerts', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) setRunError(data.error || '规则引擎运行失败');
+      else setRunResult(data.run ?? data);
       refresh();
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : '规则引擎运行失败');
     } finally { setRunning(false); }
   };
 
@@ -114,6 +137,60 @@ export default function AlertsPage() {
           <div className="text-2xl font-bold text-gray-900">{counts?.total ?? '-'}</div>
         </div>
       </div>
+
+      {/* Run result panel */}
+      {(running || runResult || runError) && (
+        <div className={`bg-white border rounded-xl shadow-sm p-5 mb-6 ${runError ? 'border-red-200' : 'border-emerald-200'}`}>
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-4">
+            <SearchCheck className={`w-4 h-4 ${runError ? 'text-red-600' : 'text-emerald-600'}`} />
+            {runError
+              ? <span className="text-red-600">规则引擎运行失败</span>
+              : runResult
+                ? `最近一次规则引擎运行 · ${new Date(runResult.ranAt).toLocaleString('zh-CN')}`
+                : '规则引擎正在扫描…'}
+          </div>
+          {runError ? <div className="text-sm text-red-600">{runError}</div> : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-emerald-50 rounded-lg p-3">
+                <div className="text-xs text-emerald-600 mb-0.5">本次新增预警</div>
+                <div className="text-xl font-bold text-emerald-700">{running ? '…' : runResult?.raised ?? 0}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-0.5">幂等跳过（已存在）</div>
+                <div className="text-xl font-bold text-gray-700">{running ? '…' : runResult?.skipped ?? 0}</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-3">
+                <div className="text-xs text-blue-600 mb-0.5">扫描记录 / 命中规则</div>
+                <div className="text-xl font-bold text-blue-700">
+                  {running ? '…' : runResult ? `${runResult.rules.reduce((s, r) => s + r.scanned, 0)} / ${runResult.rules.reduce((s, r) => s + r.hit, 0)}` : '-'}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-100 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-0.5">覆盖规则</div>
+                <div className="text-xl font-bold text-gray-700">{running ? '…' : runResult?.rules.length ?? 0}</div>
+              </div>
+            </div>
+          )}
+          {runResult && (
+            <div className="mt-4 space-y-2">
+              {runResult.rules.map(rr => {
+                const [label, sub] = rr.rule === 'contractExpiry'
+                  ? ['合同到期', '剩余≤60天']
+                  : rr.rule === 'probationExpiry' ? ['试用期到期', '剩余≤90天'] : ['考勤异常', '近7天非正常'];
+                return (
+                  <div key={rr.rule} className="flex flex-wrap items-center gap-3 text-xs">
+                    <span className="w-24 font-medium text-gray-700">{label}</span>
+                    <span className="text-gray-400">扫描 {rr.scanned} · 命中 {rr.hit}</span>
+                    <span className={`${rr.raised > 0 ? 'text-emerald-600 font-semibold' : 'text-gray-500'}`}>新增 {rr.raised}</span>
+                    {rr.skipped > 0 && <span className="text-gray-400">跳过 {rr.skipped}</span>}
+                    <span className="text-gray-300 ml-auto">{sub}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">

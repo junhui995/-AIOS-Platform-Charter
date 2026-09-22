@@ -1,9 +1,13 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../index';
 
 const instanceInclude = {
   tasks: true,
   version: { select: { version: true, definition: { select: { name: true } } } },
 } as const;
+
+type InstanceInclude = typeof instanceInclude;
+type InstanceWithRelations = Prisma.ProcessInstanceGetPayload<{ include: InstanceInclude }>;
 
 export const workflowRepository = {
   // --- Definitions ---
@@ -121,6 +125,20 @@ export const workflowRepository = {
     });
   },
 
+  async cancelInstance(id: string) {
+    return prisma.processInstance.update({
+      where: { id },
+      data: { status: 'CANCELLED', endedAt: new Date() },
+    });
+  },
+
+  async cancelPendingTasks(instanceId: string) {
+    return prisma.processTask.updateMany({
+      where: { instanceId, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
+    });
+  },
+
   async findInstance(id: string) {
     return prisma.processInstance.findUnique({
       where: { id },
@@ -128,7 +146,7 @@ export const workflowRepository = {
     });
   },
 
-  async listInstances(initiatorId?: string | null) {
+  async listInstances(initiatorId?: string | null): Promise<InstanceWithRelations[]> {
     return prisma.processInstance.findMany({
       where: initiatorId ? { initiatorId } : {},
       include: instanceInclude,

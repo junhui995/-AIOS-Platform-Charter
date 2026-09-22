@@ -128,3 +128,77 @@ apps/portal/src/app/hr/expenses/page.tsx               (新)
 apps/portal/src/app/hr/alerts/page.tsx                 (新)
 apps/portal/src/components/layout/Sidebar.tsx          (改)
 ```
+
+---
+
+# Batch 1.1 — 用户反馈收敛（请假拆双端 / 预警引擎可见 / 报销本期不做）
+
+日期：2026-09-22
+说明：响应产品诉求调整交付口径并补充闭环能力。**报销不在本期范围内**
+
+## 6. 本期变更（按最新反馈收敛）
+
+### 6.1 请假拆分为「用户端」+「管理端」
+- 数据层 `leave.ts` 新增：
+  - `updateRequest()` —— 仅 PENDING 可改（假别/日期/事由），改完发 `LeaveRequestStatusChanged(UPDATED)`。
+  - `returnFromLeave(id, usedDays)` —— 仅 APPROVED 可销假，事务内退还未休天数（按 ANNUAL/SICK 回退对应额度），状态置 `RETURNED`。
+  - `updateBalance()` —— 管理端设置年假/病假总额（upsert）。
+  - `deletePending()` —— 仅 PENDING 可撤销（删除）。
+- 流程层 `workflow.ts` 新增 `cancelInstance()`（实例置 CANCELLED）+ `cancelPendingTasks()`（清掉 PENDING 任务）；
+  撤销请假时同步取消运行中的审批实例，不留僵尸任务。
+  - 顺带修复 pnpm+Prisma 声明导出问题：`instanceInclude` 推断载荷不可移植导致
+    `TS2742 workflowRepository`，改为显式 `import type { Prisma } from '@prisma/client'`
+    + 对 `listInstances` 注解 `Prisma.ProcessInstanceGetPayload<{ include: InstanceInclude }>`（build 才真正跑通）。
+- API：
+  - `PATCH /api/leave/[id]` 增加 `UPDATE`（改待审单）与 `RETURN`（销假，必填 `usedDays`）。
+  - 新增 `DELETE /api/leave/[id]`（仅 PENDING；顺带取消审批实例）。
+  - `PATCH /api/leave/balances`（`{ employeeId, annualTotal?, sickTotal? }` 设限额）。
+- 页面：
+  - 用户端（新）`apps/portal/src/app/my/leave/page.tsx`：身份选择器（demo 无登录）/
+    我的额度卡 / 发起申请（自动起流程）/ 记录表内联「修改」「撤销」「销假（填实际休假天数）」。
+  - 管理端（重构）`apps/portal/src/app/hr/leave/page.tsx`：移除自助提交表单，改为
+    全部记录 + 状态筛选 + 通过/驳回 + 额度卡与「设限额」编辑（保存走 PATCH /api/leave/balances）。
+  - Sidebar 新增「员工自助 (Self-Service)」分组，入口「我的假期」；原「请假与假期」更名「假期审批与管理」。
+
+### 6.2 预警中心「运行规则引擎」可见化
+- `alert.ts` 的 `runRules()` 内部重构为按规则汇总：返回
+  `{ raised, skipped, ranAt, rules: [{ rule, scanned, hit, raised, skipped }] }`（幂等跳过照旧）。
+- `/api/alerts` POST 直接回传该 run 结果；页面右上角按钮点击后渲染「最近一次运行」结果面板：
+  本次新增/幂等跳过/扫描·命中/覆盖规则数 + 每条规则的扫描·命中·新增·跳过明细与失败提示（红色）。
+
+### 6.3 报销：本期不做
+- 页面与审批功能保持 Batch 1 交付现状（`/hr/expenses`、`WF-EXPENSE-APPROVAL`、Expense* 事件均保留）。
+- 本期无任何报销扩展；后续如需增强（如用户端报销自助/明细联动）另立任务。
+
+## 7. 实测记录（本机 → 远程 DB）
+
+- 创建→修改→撤销：Alice SICK 1 天（`f02262b8…`）→ UPDATE 改至 09-26 → DELETE：
+  返回 `deleted:true` 且实例 `566132a1…` 状态变为 `CANCELLED`、PENDING 任务置空。
+- 审批→销假退款：张三 ANNUAL 1 天（`68d32c9a…`）→ APPROVE（管理员，`taskCompleted:true`）→
+  RETURN `usedDays:0` → 返回 `{approvedDays:1, used:0, refund:1}`，张三 `annualUsed` 回到 0。
+- 限额设置：Alice `annualTotal 12→10` 两次 PATCH 均生效（`updatedAt` 更新）。
+- 预警运行明细：POST /api/alerts 返回
+  `raised:1, skipped:1`；`contractExpiry scanned=2,hit=1,raised=1`、
+  `probationExpiry scanned=1,hit=0,raised=0`、`attendanceAnomaly scanned=1,hit=1,raised=0`（已存在幂等跳过）。
+- 页面：`/my/leave`、`/hr/leave`、`/hr/alerts` 全部 200 且内嵌关键文案（我的假期/提交并启动审批流/设限额/运行规则引擎等）。
+
+## 8. 门禁
+- typecheck：`pnpm -r run typecheck` 6/6 通过（含 data-service、portal）。
+- test：`pnpm test` 7 文件 / **40 用例全过**。
+- lint：`pnpm lint`（packages）0 问题；`next lint`（portal）0 问题。
+
+## 9. 本次涉及文件
+```
+packages/data-service/src/repositories/leave.ts        (updateRequest/returnFromLeave/updateBalance/deletePending)
+packages/data-service/src/repositories/workflow.ts     (cancelInstance/cancelPendingTasks + TS2742 修复)
+packages/data-service/src/repositories/alert.ts        (runRules 按规则明细)
+apps/portal/src/app/api/leave/[id]/route.ts            (UPDATE/RETURN + DELETE)
+apps/portal/src/app/api/leave/balances/route.ts        (+PATCH 限额)
+apps/portal/src/app/api/alerts/route.ts                (POST 回传 run 明细)
+apps/portal/src/app/my/leave/page.tsx                  (新：用户端自助)
+apps/portal/src/app/hr/leave/page.tsx                  (重构：管理端)
+apps/portal/src/app/hr/alerts/page.tsx                 (运行结果面板)
+apps/portal/src/components/layout/Sidebar.tsx          (员工自助分组)
+docs/batch1-hr-closure-acceptance.md                   (本文件)
+```
+提交：本地提交（未 push，遵守用户指示）。

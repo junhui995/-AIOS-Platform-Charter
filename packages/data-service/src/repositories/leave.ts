@@ -133,4 +133,101 @@ export const leaveRepository = {
       });
     });
   },
+
+  /** Edit a still-pending request (dates / type / reason). */
+  async updateRequest(
+    id: string,
+    data: { leaveType?: string; startDate?: Date | string; endDate?: Date | string; reason?: string | null }
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const request = await tx.leaveRequest.findUnique({ where: { id } });
+      if (!request) throw new Error(`Leave request not found: ${id}`);
+      if (request.status !== 'PENDING') throw new Error(`Only a PENDING request can be edited (current: ${request.status})`);
+
+      const start = data.startDate ? new Date(data.startDate) : request.startDate;
+      const end = data.endDate ? new Date(data.endDate) : request.endDate;
+      if (start.getTime() > end.getTime()) throw new Error('startDate must be before endDate');
+
+      return tx.leaveRequest.update({
+        where: { id },
+        data: {
+          ...(data.leaveType ? { leaveType: data.leaveType } : {}),
+          ...(data.startDate ? { startDate: start } : {}),
+          ...(data.endDate ? { endDate: end } : {}),
+          ...(data.reason !== undefined ? { reason: data.reason } : {}),
+        },
+      });
+    });
+  },
+
+  /**
+   * 销假 (return from leave). Only an APPROVED request can be returned.
+   * `usedDays` is how many days were actually taken; unused days are
+   * refunded to the annual/sick balance.
+   */
+  async returnFromLeave(id: string, usedDays: number, operatorId?: string | null) {
+    return prisma.$transaction(async (tx) => {
+      const request = await tx.leaveRequest.findUnique({ where: { id } });
+      if (!request) throw new Error(`Leave request not found: ${id}`);
+      if (request.status === 'RETURNED') throw new Error('Leave already returned');
+      if (request.status !== 'APPROVED') throw new Error(`Only an APPROVED leave can be returned (current: ${request.status})`);
+
+      const approvedDays = leaveDays(request.startDate, request.endDate);
+      const used = Math.max(0, Math.min(Number(usedDays) || 0, approvedDays));
+      const refund = approvedDays - used;
+
+      if (refund > 0) {
+        const balance = await tx.leaveBalance.findUnique({ where: { employeeId: request.employeeId } });
+        if (balance) {
+          const data =
+            request.leaveType === 'ANNUAL'
+              ? { annualUsed: Math.max(0, balance.annualUsed - refund) }
+              : request.leaveType === 'SICK'
+                ? { sickUsed: Math.max(0, balance.sickUsed - refund) }
+                : {};
+          if (Object.keys(data).length > 0) {
+            await tx.leaveBalance.update({ where: { id: balance.id }, data });
+          }
+        }
+      }
+
+      const updated = await tx.leaveRequest.update({
+        where: { id },
+        data: { status: 'RETURNED' },
+      });
+
+      return { request: updated, approvedDays, used, refund, operatorId: operatorId ?? null };
+    });
+  },
+
+  /** Admin sets leave limits (annual/sick totals). */
+  async updateBalance(
+    employeeId: string,
+    totals: { annualTotal?: number; sickTotal?: number }
+  ) {
+    return prisma.leaveBalance.upsert({
+      where: { employeeId },
+      update: {
+        ...(totals.annualTotal !== undefined ? { annualTotal: totals.annualTotal } : {}),
+        ...(totals.sickTotal !== undefined ? { sickTotal: totals.sickTotal } : {}),
+      },
+      create: {
+        employeeId,
+        annualTotal: totals.annualTotal ?? 10,
+        sickTotal: totals.sickTotal ?? 5,
+      },
+    });
+  },
+
+  /** Delete a still-pending request (self-service withdraw). */
+  async deletePending(id: string) {
+    return prisma.$transaction(async (tx) => {
+      const request = await tx.leaveRequest.findUnique({ where: { id } });
+      if (!request) throw new Error(`Leave request not found: ${id}`);
+      if (request.status !== 'PENDING') {
+        throw new Error(`Only a PENDING request can be deleted (current: ${request.status})`);
+      }
+      return tx.leaveRequest.delete({ where: { id } });
+    });
+  },
 };
