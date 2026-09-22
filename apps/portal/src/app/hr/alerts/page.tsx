@@ -76,9 +76,12 @@ export default function AlertsPage() {
     setRunError(null);
     try {
       const res = await fetch('/api/alerts', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) setRunError(data.error || '规则引擎运行失败');
-      else setRunResult(data.run ?? data);
+      const text = await res.text();
+      if (!res.ok) {
+        setRunError(text.startsWith('<') ? '服务返回异常页面，请刷新后重试' : (JSON.parse(text).error || '规则引擎运行失败'));
+      } else {
+        setRunResult(JSON.parse(text).run ?? JSON.parse(text));
+      }
       refresh();
     } catch (err) {
       setRunError(err instanceof Error ? err.message : '规则引擎运行失败');
