@@ -29,6 +29,13 @@ export function leaveDays(startDate: Date, endDate: Date): number {
 }
 
 export const leaveRepository = {
+  async getOwner(id: string) {
+    return prisma.leaveRequest.findUnique({
+      where: { id },
+      select: { employeeId: true },
+    });
+  },
+
   async list(employeeId?: string | null) {
     return prisma.leaveRequest.findMany({
       where: employeeId ? { employeeId } : {},

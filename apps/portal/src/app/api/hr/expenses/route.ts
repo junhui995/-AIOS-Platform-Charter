@@ -2,26 +2,24 @@ import { NextResponse } from 'next/server';
 import { expenseRepository, workflowRepository, employeeRepository } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 import { startApprovalProcess, resolveApprover } from '@/lib/workflow/approval';
+import { requireAuth, requireOwnerOrAdmin, handleRouteError } from '@/lib/auth/guard';
 
 const EXPENSE_CATEGORIES = ['TRAVEL', 'TAXI', 'MEAL', 'OFFICE', 'OTHER'];
 
-/**
- * GET returns expenses; any PENDING_APPROVAL expense that is not yet backed
- * by a running approval instance gets one started on read (idempotent
- * reconciliation), so every pending expense also surfaces in the BPM task
- * center.
- */
 export async function GET(req: Request) {
   try {
+    const ctx = await requireAuth();
     const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get('employeeId');
-    const expenses = await expenseRepository.listWithDetails(employeeId);
+    let employeeId = searchParams.get('employeeId');
+    if (!employeeId) employeeId = ctx.employeeId;
+    if (employeeId && employeeId !== ctx.employeeId && !ctx.bypass) {
+      await requireOwnerOrAdmin(employeeId, 'HR');
+    }
+    const expenses = await expenseRepository.listWithDetails(employeeId ?? undefined);
 
     const pending = expenses.filter((e) => e.status === 'PENDING_APPROVAL');
     const enriched: (typeof expenses[number] & { processInstanceId: string | null })[] = [];
 
-    // Sequential reconciliation: concurrent starts race on the definition
-    // unique-code constraint, so run expense by expense.
     for (const expense of expenses) {
       let processInstanceId: string | null = null;
       if (pending.some((p) => p.id === expense.id)) {
@@ -52,24 +50,20 @@ export async function GET(req: Request) {
 
     return NextResponse.json(enriched);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to fetch expenses';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
 
-/**
- * Employee self-service submit: create the expense as pending, immediately
- * start the EXPENSE approval flow and publish ExpenseCreated, so the record
- * shows up in both the user's own list and the BPM task center at once.
- */
 export async function POST(req: Request) {
   try {
+    await requireAuth();
     const body = await req.json();
     const { employeeId, amount, reason, category, occurredOn } = body;
 
     if (!employeeId || amount === undefined || !reason?.trim()) {
       return NextResponse.json({ error: 'Missing required fields (employeeId, amount, reason)' }, { status: 400 });
     }
+    await requireOwnerOrAdmin(employeeId, 'HR');
 
     const parsedAmount = Number(amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
@@ -129,7 +123,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ expense, instanceId, state }, { status: 201 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to create expense';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }

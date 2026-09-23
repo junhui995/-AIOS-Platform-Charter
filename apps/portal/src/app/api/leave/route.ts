@@ -2,22 +2,29 @@ import { NextResponse } from 'next/server';
 import { employeeRepository, leaveRepository, leaveDays } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 import { startApprovalProcess } from '@/lib/workflow/approval';
+import { requireAuth, requireOwnerOrAdmin, handleRouteError } from '@/lib/auth/guard';
 
 const LEAVE_TYPES = ['ANNUAL', 'SICK', 'UNPAID', 'MATERNITY', 'OTHER'];
 
 export async function GET(req: Request) {
   try {
+    const ctx = await requireAuth();
     const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get('employeeId');
-    const requests = await leaveRepository.listWithDetails(employeeId);
+    let employeeId = searchParams.get('employeeId');
+    if (!employeeId) employeeId = ctx.employeeId;
+    if (employeeId && employeeId !== ctx.employeeId && !ctx.bypass) {
+      await requireOwnerOrAdmin(employeeId, 'HR');
+    }
+    const requests = await leaveRepository.listWithDetails(employeeId ?? undefined);
     return NextResponse.json(requests);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch leave requests' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requireAuth();
     const body = await req.json();
     const { employeeId, leaveType, startDate, endDate, reason } = body;
 
@@ -27,6 +34,7 @@ export async function POST(req: Request) {
     if (!LEAVE_TYPES.includes(leaveType)) {
       return NextResponse.json({ error: `Invalid leaveType; expected one of ${LEAVE_TYPES.join(', ')}` }, { status: 400 });
     }
+    await requireOwnerOrAdmin(employeeId, 'HR');
 
     const employee = await employeeRepository.findById(employeeId);
     if (!employee) {
@@ -86,7 +94,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ request, instanceId, state: funcName });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to create leave request';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }

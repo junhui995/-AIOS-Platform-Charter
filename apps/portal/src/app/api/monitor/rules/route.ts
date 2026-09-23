@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { monitorRepository, prisma } from '@aios/data-service';
+import { requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function GET() {
   try {
+    await requirePermission('MONITOR', 'READ');
     const rules = await monitorRepository.listRules();
     const total = await prisma.monitorRule.count();
     const enabled = await prisma.monitorRule.count({ where: { enabled: true } });
@@ -24,19 +26,18 @@ export async function GET() {
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to list monitor rules';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requirePermission('MONITOR', 'WRITE');
     const body = await req.json();
     const { operatorId, ...rule } = body;
     const created = await monitorRepository.createRule(rule, operatorId ?? null);
     return NextResponse.json({ rule: created }, { status: 201 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to create monitor rule';
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return handleRouteError(err);
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { WorkflowEngine } from '@/lib/workflow/engine';
 import { workflowRepository, leaveRepository, expenseRepository, toExpenseDecisionEvent } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
+import { requireAuth, requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 /**
  * Complete a pending BPM task and synchronize the underlying domain record
@@ -10,6 +11,7 @@ import { eventBus, EventTypes } from '@aios/events';
  */
 export async function POST(req: Request) {
   try {
+    await requirePermission('WORKFLOW', 'WRITE');
     const body = await req.json();
     const { taskId, action, operatorId, comment } = body;
 
@@ -93,13 +95,14 @@ export async function POST(req: Request) {
 
 // List pending tasks by assignee (kept for the workflow designer / history).
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const assigneeId = searchParams.get('assigneeId');
-
   try {
+    await requireAuth();
+    const { searchParams } = new URL(req.url);
+    const assigneeId = searchParams.get('assigneeId');
+
     const tasks = await WorkflowEngine.getTasks(assigneeId);
     return NextResponse.json(tasks);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }

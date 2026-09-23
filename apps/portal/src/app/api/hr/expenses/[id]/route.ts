@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { expenseRepository, workflowRepository, toExpenseDecisionEvent } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 import { completeApprovalTask, resolveApprover } from '@/lib/workflow/approval';
+import { requireAuth, requireOwnerOrAdmin, requireAnyPermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAnyPermission([['HR', 'WRITE'], ['WORKFLOW', 'WRITE']]);
     const { id } = await params;
     const body = await req.json();
     const { action, operatorId, comment } = body;
@@ -60,15 +62,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ expense, instanceId, taskCompleted });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to update expense';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
 
 /** Employee self-service: withdraw a pending expense and cancel its approval flow. */
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAuth();
     const { id } = await params;
+    const current = await expenseRepository.findById(id);
+    if (!current) {
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 });
+    }
+    await requireOwnerOrAdmin(current.employeeId, 'HR');
 
     const instance = await workflowRepository.findInstanceByFormField('expenseId', id);
     if (instance) {
@@ -86,7 +93,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     return NextResponse.json({ deleted: true, instanceId: instance?.id ?? null });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to delete expense';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }

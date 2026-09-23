@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { contractRepository } from '@aios/data-service';
+import { requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
+    await requirePermission('HR', 'WRITE');
     const { actionType, newEndDate } = await req.json();
     const contractId = params.id;
 
@@ -27,7 +29,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Failed to process contract action' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }

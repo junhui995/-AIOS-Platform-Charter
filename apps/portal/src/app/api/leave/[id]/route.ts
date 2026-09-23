@@ -2,14 +2,22 @@ import { NextResponse } from 'next/server';
 import { workflowRepository, leaveRepository } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 import { completeApprovalTask, resolveApprover } from '@/lib/workflow/approval';
+import { requireAuth, requireOwnerOrAdmin, requireAnyPermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const ctx = await requireAuth();
     const { id } = await params;
     const body = await req.json();
     const { action, operatorId, comment } = body;
 
-    // UPDATE / RETURN are employee self-service actions; APPROVE / REJECT are admin actions.
+    // UPDATE / RETURN are employee self-service actions; APPROVE / REJECT are approval actions (HR or Workflow actor).
+    if (action === 'UPDATE' || action === 'RETURN') {
+      const owner = await leaveRepository.getOwner(id);
+      await requireOwnerOrAdmin(owner?.employeeId ?? ctx.employeeId, 'HR');
+    } else {
+      await requireAnyPermission([['HR', 'WRITE'], ['WORKFLOW', 'WRITE']]);
+    }
     if (action === 'UPDATE') {
       const updated = await leaveRepository.updateRequest(id, {
         leaveType: body.leaveType,
@@ -100,14 +108,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ request: updated, instanceId, taskCompleted });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to update leave request';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const ctx = await requireAuth();
     const { id } = await params;
+    const owner = await leaveRepository.getOwner(id);
+    await requireOwnerOrAdmin(owner?.employeeId ?? ctx.employeeId, 'HR');
 
     const instance = await workflowRepository.findInstanceByFormField('leaveRequestId', id);
     if (instance) {
@@ -125,7 +135,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     return NextResponse.json({ deleted: true, instanceId: instance?.id ?? null });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to delete leave request';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }

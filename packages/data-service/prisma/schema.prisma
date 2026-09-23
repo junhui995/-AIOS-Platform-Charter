@@ -98,6 +98,7 @@ model Employee {
   roleId        String? // System Role Binding
   hireDate      DateTime
   status        String   @default("ACTIVE") // ACTIVE, PROBATION, RESIGNED, DISABLED
+  passwordHash  String? // scrypt$<salt>$<hash>; null = 未初始化（seed 置默认密码）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

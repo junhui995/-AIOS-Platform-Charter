@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { performanceRepository } from '@aios/data-service';
+import { requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function GET() {
   try {
+    await requirePermission('HR', 'READ');
     const templates = await performanceRepository.listTemplates();
     return NextResponse.json(templates);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch performance templates' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requirePermission('HR', 'WRITE');
     const body = await req.json();
     const template = await performanceRepository.createTemplate({
       name: body.name,
@@ -19,7 +22,7 @@ export async function POST(req: Request) {
       metrics: body.metrics,
     });
     return NextResponse.json(template);
-  } catch {
-    return NextResponse.json({ error: 'Failed to create performance template' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }

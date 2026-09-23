@@ -25,3 +25,4 @@ export * from './repositories/registry';
 export * from './repositories/monitor';
 export * from './repositories/messages';
 export * from './repositories/knowledge';
+export * from './repositories/security';

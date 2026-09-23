@@ -611,3 +611,74 @@ docs/batch1-hr-closure-acceptance.md                  (本节)
 - Markdown 渲染（当前纯文本 pre-wrap，按需换 `react-markdown`）。
 - 文档版本历史 / 审批发布流（当前直接二态）。
 - 权限化（跟随 Identity/Permission 支柱）。
+
+### 34. 权限与安全底座（Identity/Permission）—— Phase 1 收尾的第二根支柱
+
+#### 34.1 定位与边界
+本轮把"真实登录 + 角色权限 + IDOR 防护"做成执行级底座，替换此前 NextAuth 的 Mock 登录与零鉴权 API：
+
+- **身份**：Employee 即账号（工号/邮箱 + 密码），scrypt 口令哈希（`node:crypto` 零新依赖），仅 ACTIVE/PROBATION 可登录。
+- **授权**：既有 `Role / RolePermission(模块×动作×维度) / OrgDimension` 模型启用；权限判定在 `hasPermission`，动作层级 ADMIN>WRITE>READ 于 `grantsAllow` 应用；超管角色（系统管理员）额外全模块收口。
+- **IDOR 防护**：`requireOwnerOrAdmin`——员工只能改自己的记录，管理员/写权限除外；跨模块审批走 `requireAnyPermission`（HR 或 WORKFLOW 写任一即可，保证 部门主管 走领域路由审批不 403）。
+- **数据最小化**：`employeeRepository` 一律脱敏 `passwordHash`；员工列表全量读取需 HR WRITE，无写权限的读者（含 部门主管/员工）只拿到 `id/code/name/email` 最小字段。
+- **边界（刻意不越界）**：不改业务表结构；不引第三方权限库；不搞 SSO/MFA（文档标记候选）；不变更遗留 alert.ts 双引擎判定（§32 遗留）。
+
+#### 34.2 数据与种子
+- Schema：`Employee.passwordHash String?`（db push 已应用）。
+- `seedSecurity()` 幂等种子：4 内置角色（系统管理员/HRBP/部门主管/员工）+ 模块×动作矩阵 + COMPANY_DIMENSION；把默认口令 `admin123` 写入所有无 hash 的 ACTIVE/PROBATION 员工；演示绑定 EMP-000=系统管理员、EMP-002=员工、其余 ACTIVE/PROBATION=部门主管（保证审批链路可用，生产须显式分配）。
+
+角色矩阵（维度：全公司）：
+| 角色 | 权限 |
+| --- | --- |
+| 系统管理员 | 全模块 ADMIN（内置锁定，不可改/删） |
+| HRBP | HR/ORG/WORKFLOW WRITE、FINANCE/MONITOR/系统 READ、KNOWLEDGE WRITE、SYSTEM READ |
+| 部门主管 | HR/ORG/FINANCE/MONITOR/KNOWLEDGE READ、WORKFLOW WRITE（可走领域路由审批） |
+| 员工 | HR/FINANCE/MESSAGES/WORKFLOW READ、KNOWLEDGE READ（自助） |
+
+#### 34.3 守卫与 API
+- `apps/portal/src/lib/auth/guard.ts`：`getAuthContext / requireAuth / requirePermission(模块,动作) / requireAnyPermission([模块×动作]…) / requireOwnerOrAdmin(资源属主, 模块) / AuthError / handleRouteError`；`AUTH_DEV_BYPASS=1` 供开发冒烟放行。
+- `authOptions.ts`：NextAuth credentials 真实登录（`authenticate` 校验 → JWT 注入 employeeId/role），`api/auth/[...nextauth]` 接入。
+- 路由接线范围：employee（含字段裁剪与角色绑定 PATCH）、org（route/departments/positions/dimensions）、hr/contracts(+action)、leave（route/[id]，approve 走 HR∨WORKFLOW 写）、hr/expenses（route/[id]）、performance(review/templates)、alerts、monitor(rules/[id]/run/registry)、workflow(definitions/tasks/user)、knowledge（route/[id]）、messages（route/[id]，IDOR 收件箱隔离）、system/roles（CRUD + 权限矩阵替换 + 内置角色保护）。
+- 新增角色管理：`GET/POST /api/system/roles`、`PATCH/DELETE /api/system/roles/[id]`（SYSTEM 读写守卫；PATCH 走事务整体替换权限矩阵；系统管理员角色不可改删；有成员的角色不可删）。`/system/roles` 页面真实化（角色卡/成员数/新建/删除/模块×动作矩阵编辑）。
+- 登录页 `/login` 真实表单（凭据登录 + 演示账号提示）。
+
+#### 34.4 验证实录
+- 门禁：pnpm test **58/58**（新增 security.test.ts 8 条：scrypt 往返/盐唯一/畸形值拒绝、grantsAllow 动作层级与跨模块隔离）、data-service tsc 0、portal typecheck 0、lint 0。
+- 构建与运行坑（已拍平）：Next 14.2 对 `node:crypto` 的 webpack 打包需在 next.config `webpack` 钩子将 `node:*` 与 `@aios/data-service` 设为 commonjs external（`experimental.serverComponentsExternalPackages` 不覆盖 instrumentation）；签名密钥错误键名会静默失效；`verifyPassword(password, hash)` 参数顺序先在测试脚本踩坑（码层无 bug）。
+- HTTP 冒烟（12/12）：
+  - 匿名访问 `/api/employee` → 401。
+  - EMP-000/admin123 登录 → session.role=系统管理员 → GET 员工列表 200（含 role）、POST/PATCH 角色 CRUD 200/201、删除与篡改"系统管理员"内置角色 → 400。
+  - EMP-002/admin123（员工）→ 员工列表仅 `id/code/name/email`（无 roleId/phoneNumber/passwordHash）、POST 员工 → 403、GET roles API → 403、PATCH 他人状态/角色 → 403；给自己建请假 200、代他人建请假（IDOR）→ 403、自批假 → 403。
+  - EMP-001/admin123（部门主管，PROBATION 可登录）→ 审批员工请假 → 200 APPROVED（WORKFLOW WRITE 使然）、读员工列表为脱敏视图。
+- 页面：`/login`、`/system/roles`、`/knowledge` 均 200。
+
+#### 34.5 提交文件清单
+```
+packages/data-service/prisma/schema.prisma           (Employee.passwordHash)
+packages/data-service/src/repositories/security.ts   (scrypt/authenticate/权限判定/幂等种子)
+packages/data-service/src/repositories/security.test.ts
+packages/data-service/src/repositories/employee.ts   (脱敏 passwordHash、role 关联、update/create 支持 roleId)
+packages/data-service/src/index.ts                   (导出 security)
+apps/portal/next.config.mjs                          (node:* 与 data-service webpack external)
+apps/portal/src/lib/auth/authOptions.ts              (真实 credentials + JWT)
+apps/portal/src/lib/auth/guard.ts                    (requireAuth/Permission/Any/OwnerOrAdmin)
+apps/portal/src/app/api/auth/[...nextauth]/route.ts
+apps/portal/src/app/login/page.tsx                   (真实登录表单)
+apps/portal/src/app/api/employee/route.ts            (鉴权+HR WRITE 全量/最小字段裁剪)
+apps/portal/src/app/api/employee/[id]/route.ts       (PATCH 状态/角色等，HR WRITE)
+apps/portal/src/app/api/system/roles/route.ts        (角色 CRUD)
+apps/portal/src/app/api/system/roles/[id]/route.ts   (矩阵替换/内置保护/成员约束)
+apps/portal/src/app/system/roles/page.tsx            (角色管理页真实化)
+接线守卫：api/org/*、api/hr/contracts*、api/leave*、api/hr/expenses*、
+          api/hr/performance/*、api/alerts*、api/monitor/*、api/workflow/*、
+          api/knowledge*、api/messages*
+apps/portal/src/instrumentation.ts                   (挂 seedSecurity)
+docs/batch1-hr-closure-acceptance.md                 (本节)
+```
+
+#### 34.6 遗留候选（不阻塞交付）
+- 维度级数据权限落地（当前固定 Company_Dimension；组织维度扩展至部门时实现"本部门读写"）。
+- 改密/重置密码入口与服务（当前仅种子默认口令）。
+- 登录页被强制跳转 + 中间件级页面守卫（当前页面内容鉴权由 API 完成）。
+- SSO/LDAP 与 MFA 接入。
+- 剩余低风险路由（leave/balances、workflow/instances|retro|simulate、chat、contracts/stats、monitor/validate）鉴权标注后续补齐。

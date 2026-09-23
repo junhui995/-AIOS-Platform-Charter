@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { workflowRepository } from '@aios/data-service';
+import { requireAuth, requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 export async function GET() {
   try {
+    await requireAuth();
     const workflows = await workflowRepository.listDefinitions();
     return NextResponse.json(workflows);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch workflows' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requirePermission('WORKFLOW', 'WRITE');
     const body = await req.json();
     const workflow = await workflowRepository.saveDefinition({
       id: body.id || undefined,
@@ -21,7 +24,7 @@ export async function POST(req: Request) {
       isActive: body.isActive ?? true,
     });
     return NextResponse.json(workflow);
-  } catch {
-    return NextResponse.json({ error: 'Failed to save workflow' }, { status: 500 });
+  } catch (err) {
+    return handleRouteError(err);
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { workflowRepository } from '@aios/data-service';
+import { requireAuth, handleRouteError } from '@/lib/auth/guard';
 
 /**
  * Unified Task Center data endpoint.
@@ -11,6 +12,7 @@ import { workflowRepository } from '@aios/data-service';
  */
 export async function GET(req: Request) {
   try {
+    await requireAuth();
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
     const view = searchParams.get('view') ?? 'pending';
@@ -28,7 +30,6 @@ export async function GET(req: Request) {
     const tasks = await workflowRepository.listPendingTasks(employeeId);
     return NextResponse.json({ view, data: tasks });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to fetch user tasks';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }

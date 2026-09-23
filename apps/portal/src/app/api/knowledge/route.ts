@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { knowledgeRepository, isKnowledgeCategory, KNOWLEDGE_STATUSES } from '@aios/data-service';
+import { requireAuth, requirePermission, handleRouteError } from '@/lib/auth/guard';
 
 const ALLOWED_STATUSES = KNOWLEDGE_STATUSES as readonly string[];
 
 export async function GET(req: Request) {
   try {
+    await requireAuth();
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') ?? undefined;
     const category = searchParams.get('category') ?? undefined;
@@ -12,13 +14,13 @@ export async function GET(req: Request) {
     const { items, total } = await knowledgeRepository.list({ q, category, status });
     return NextResponse.json({ items, total });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to fetch knowledge articles';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requirePermission('KNOWLEDGE', 'WRITE');
     const body = await req.json();
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     const content = typeof body.content === 'string' ? body.content.trim() : '';
@@ -46,7 +48,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(article, { status: 201 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to create article';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return handleRouteError(err);
   }
 }
