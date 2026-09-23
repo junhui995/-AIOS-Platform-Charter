@@ -1,7 +1,7 @@
 import { prisma } from '../index';
 import { Prisma } from '@prisma/client';
-import { parseCondition, compileCondition, renderTemplate } from './ruleEngine';
-import { getRegistryEntity } from './registry';
+import { parseCondition, compileCondition, renderTemplate, collectConditionFields } from './ruleEngine';
+import { getRegistryEntity, type RegistryEntity } from './registry';
 import { leaveDays } from './leave';
 
 export interface RuleActionInput {
@@ -144,6 +144,77 @@ async function fetchTargetRows(rule: {
   }
 }
 
+/**
+ * Fence boundary (audit round 1, 2026-09-23):
+ * scopeFilter is the ONLY allowed place for DB-side row pre-selection. It is
+ * deliberately restricted to registered flat fields and the operator wrapper
+ * set below. Relation filters, arbitrary JSON and nested paths are forbidden
+ * so it can never grow into a second, unsandboxed query language.
+ */
+const SCOPE_WRAP_OPS = new Set([
+  'equals', 'not', 'in', 'notIn', 'gt', 'gte', 'lt', 'lte',
+  'contains', 'notContains', 'startsWith', 'endsWith',
+]);
+
+function isScalar(v: unknown): boolean {
+  return typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null;
+}
+
+function validateScopeFilterValue(key: string, value: unknown): void {
+  if (value === null || value === undefined) return;
+  if (isScalar(value)) return;
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    for (const [op, opVal] of Object.entries(value as Record<string, unknown>)) {
+      if (!SCOPE_WRAP_OPS.has(op)) {
+        throw new Error(`Unsupported scopeFilter operator "${op}" on field "${key}"`);
+      }
+      if (op === 'in' || op === 'notIn') {
+        if (!Array.isArray(opVal) || opVal.length === 0 || !opVal.every(isScalar)) {
+          throw new Error(`scopeFilter.${key}.${op} must be a non-empty array of scalar values`);
+        }
+      } else if (!isScalar(opVal)) {
+        throw new Error(`scopeFilter.${key}.${op} value must be a scalar (string|number|boolean|null)`);
+      }
+    }
+    return;
+  }
+  throw new Error(`Invalid scopeFilter value for field "${key}": expected scalar or scalar operator object`);
+}
+
+function validateScopeFilter(input: RuleInput['scopeFilter'], entity: RegistryEntity): void {
+  if (input == null) return;
+  if (typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('scopeFilter must be an object of field conditions or null');
+  }
+  const allowed = new Set(entity.fields.map((f) => f.name));
+  for (const [key, value] of Object.entries(input)) {
+    if (key.includes('.')) throw new Error(`Nested scopeFilter keys are not supported: "${key}"`);
+    if (!allowed.has(key)) throw new Error(`Unknown scopeFilter field "${key}" for target "${entity.key}"; only registered fields are allowed`);
+    validateScopeFilterValue(key, value);
+  }
+}
+
+/**
+ * Enforces the Registry whitelist at authoring time: every `@field` in a
+ * condition must be a registered flat field of the rule's target. Multi-segment
+ * paths are rejected because fetchers only project flat, denormalized rows.
+ */
+export function assertRuleConditionFields(expr: string, target: string): void {
+  const entity = getRegistryEntity(target);
+  if (!entity) throw new Error(`Unknown monitor target: ${target}`);
+  const allowed = new Set(entity.fields.map((f) => f.name));
+  const scan = collectConditionFields(expr);
+  if (!scan.ok) throw new Error(`Invalid condition expression: ${scan.error}`);
+  for (const path of scan.fields) {
+    if (path.includes('.')) {
+      throw new Error(`Nested field references are not supported in rules: "@${path}"`);
+    }
+    if (!allowed.has(path)) {
+      throw new Error(`Unknown field "@${path}" for target "${target}"; only registered fields are allowed`);
+    }
+  }
+}
+
 function validateRule(input: RuleInput): void {
   if (!input.code || !input.code.trim()) throw new Error('code is required');
   if (!input.name || !input.name.trim()) throw new Error('name is required');
@@ -153,6 +224,8 @@ function validateRule(input: RuleInput): void {
   if (!input.conditionExpr || !input.conditionExpr.trim()) throw new Error('conditionExpr is required');
   const parsed = parseCondition(input.conditionExpr);
   if (!parsed.ok) throw new Error(`Invalid condition expression: ${parsed.error}`);
+  assertRuleConditionFields(input.conditionExpr, input.target);
+  validateScopeFilter(input.scopeFilter, entity);
   if (!input.schedule || !['interval', 'dailyAt', 'manual'].includes(input.schedule.kind)) {
     throw new Error('Invalid schedule.kind; expected interval|dailyAt|manual');
   }
@@ -241,10 +314,14 @@ export const monitorRepository = {
     if (input.conditionExpr !== undefined) {
       const parsed = parseCondition(input.conditionExpr);
       if (!parsed.ok) throw new Error(`Invalid condition expression: ${parsed.error}`);
+      assertRuleConditionFields(input.conditionExpr, input.target ?? rule.target);
     }
     if (input.target !== undefined) {
       const entity = getRegistryEntity(input.target);
       if (!entity) throw new Error(`Unknown monitor target: ${input.target}`);
+    }
+    if (input.scopeFilter !== undefined) {
+      validateScopeFilter(input.scopeFilter, getRegistryEntity(input.target ?? rule.target)!);
     }
 
     const next = { ...rule, ...input, schedule: input.schedule ? normalizeSchedule({ schedule: input.schedule }) : (rule.schedule as RuleInput['schedule']) };

@@ -4,6 +4,7 @@ import {
   evaluateCondition,
   compileCondition,
   renderTemplate,
+  collectConditionFields,
   RuleEvalError,
 } from './ruleEngine';
 
@@ -68,5 +69,14 @@ describe('ruleEngine DSL', () => {
     const env = { employeeName: 'Alice', code: 'HT-001', daysRemaining: 12 };
     expect(renderTemplate('{{employeeName}}（{{code}}）剩余 {{daysRemaining}} 天', env)).toBe('Alice（HT-001）剩余 12 天');
     expect(renderTemplate('无引用字段保留 {{nope}}', env)).toBe('无引用字段保留 {{nope}}');
+  });
+
+  it('collects every @field reference for Registry whitelist enforcement', () => {
+    expect(collectConditionFields('@daysRemaining <= 60 && daysUntil(@endDate) > 0'))
+      .toMatchObject({ ok: true, fields: ['daysRemaining', 'endDate'] });
+    expect(collectConditionFields("@status == 'ACTIVE' || @code == 'EMP-002'").fields)
+      .toEqual(expect.arrayContaining(['status', 'code']));
+    expect(collectConditionFields('@a.b == 1').fields).toEqual(['a.b']);
+    expect(collectConditionFields('@x &&')).toMatchObject({ ok: false });
   });
 });

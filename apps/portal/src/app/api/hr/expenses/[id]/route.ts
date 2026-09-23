@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { expenseRepository, workflowRepository } from '@aios/data-service';
+import { expenseRepository, workflowRepository, toExpenseDecisionEvent } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 import { completeApprovalTask, resolveApprover } from '@/lib/workflow/approval';
 
@@ -50,15 +50,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       eventType: action === 'APPROVE' ? EventTypes.EXPENSE_APPROVED : EventTypes.EXPENSE_REJECTED,
       aggregate: 'Expense',
       aggregateId: id,
-      payload: {
-        expenseId: id,
-        code: current.code,
-        amount: current.amount,
+      payload: toExpenseDecisionEvent(current, {
         decision: action,
         operatorId: decidedBy,
-        comment: comment ?? null,
+        comment,
         processInstanceId: instanceId,
-      },
+      }),
     });
 
     return NextResponse.json({ expense, instanceId, taskCompleted });

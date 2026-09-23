@@ -156,9 +156,6 @@ export const EventTypes = {
   EXPENSE_APPROVAL_REQUIRED: 'ExpenseApprovalRequired',
   EXPENSE_CANCELLED: 'ExpenseCancelled',
   TOOL_CALLED: 'ToolCalled',
-  PROCESS_INSTANCE_STARTED: 'ProcessInstanceStarted',
-  PROCESS_TASK_CREATED: 'ProcessTaskCreated',
-  PROCESS_INSTANCE_COMPLETED: 'ProcessInstanceCompleted',
 } as const;
 
 /** Shared application-wide event bus instance. */

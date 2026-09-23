@@ -1,4 +1,4 @@
-import { employeeRepository, leaveRepository, expenseRepository } from '@aios/data-service';
+import { employeeRepository, leaveRepository, expenseRepository, toExpenseDecisionEvent } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 
 export interface ToolContext {
@@ -220,7 +220,10 @@ const autoApproveExpense: ToolDefinition<{ expenseId: string; approvedById?: str
       eventType: EventTypes.EXPENSE_APPROVED,
       aggregate: 'Expense',
       aggregateId: approved.id,
-      payload: { amount: Number(approved.amount), approvedById: approved.approvedById },
+      payload: toExpenseDecisionEvent(approved, {
+        decision: 'APPROVE',
+        operatorId: args.approvedById ?? null,
+      }),
     });
 
     return { success: true, expenseId: approved.id, status: 'APPROVED' };

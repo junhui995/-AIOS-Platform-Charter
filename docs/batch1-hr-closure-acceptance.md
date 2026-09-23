@@ -483,3 +483,77 @@ apps/portal/src/app/my/messages/page.tsx           (收件箱页)
 apps/portal/src/components/layout/Sidebar.tsx      (员工自助 + 消息中心)
 docs/batch1-hr-closure-acceptance.md               (本文档)
 ```
+### 32. 通用能力边界收敛（逼问一）：最小围栏实施 + 职责定案
+
+本轮不新增业务功能，只对已实现通用能力做"万能化边界"逼问与收敛。结论已在本节固化，3 处执行级围栏已落码并验证。
+
+#### 32.1 事实修正（相对之前文档/汇报）
+- 不存在 `MONITOR_RUN` 事件：`monitor.ts` 不依赖 `@aios/events`，只写 `ruleRunLog`。
+- `monitor.ts` 无 `listAlerts/resolveAlert/openAlerts`；那是遗留 `alert.ts` 的职责。当前存在**两套预警引擎并存写同一 Alert 表**：遗留 `alert.ts`（LEGACY，手动 `/api/alerts` POST 触发，instrumentation 不调用）与新版 `monitor.ts`（RULE-*，scheduler 驱动）。`alert.ts` 保留可运行但标注 legacy，默认待退役。
+- `businessType` 全库 0 处；其"胎儿形态"是 `POST /api/workflow/tasks` 按 `formData.leaveRequestId/expenseId` 键存在性 if/else 分发。
+
+#### 32.2 职责定案（语义边界，本轮不改代码的部分）
+```
+Rule Engine   = 纯条件布尔 DSL（Pratt 解析，无 IO/副作用）。query/计算/修改/告警/通知/编排 均不进入。
+scopeFilter   = 数据库端行预筛（Prisma where 直通）。只允许注册标量字段 + 受限操作符。
+conditionExpr = 应用端行内布尔判定（沙箱 DSL）。只能读窗口内字段（含派生）。
+Registry      = 规则字段白名单（文档级→本轮升为执行级）。不得携带表/repo/连接信息。
+Derived Field = Monitor 临时计算（选项 B），但计算逻辑归属领域（days 已走 leaveDays 先例）；出现第二消费者即升领域方法。
+Alert         = 系统发现的问题记录（幂等）。不得驱动业务审批/修改业务记录。availableActions 引擎侧恒为 []。
+NotificationLog= 消息视图：inapp 行即收件箱，非 inapp 行仅审计。独立 Message/MessageRead 留待真实需求。
+formData      = 表单数据 + WF 上下文（引用键 expenseId|leaveRequestId 恰一 + approverId）。不得承载审批指令/未知 key。
+businessType  = 不存在，且禁止引入字符串 businessType 做 switch；类型标识由 definition.code 枚举承担。
+Workflow Task API = 完成 Task + 触发领域动作；领域动作收敛为按业务类型一个 handler（红线：第 3 业务类型必须转 handler）。
+Repository    = 事务/守卫/状态转换原语；禁止 import 事件总线（现状已满足，保持）。
+Event         = 已发生事实（past tense）；唯一 producer；payload 契约冻结；无消费者的常量禁止新增。
+```
+
+#### 32.3 已实施的最小围栏（3 处，均已在 create/update/validate 入口生效）
+1. **scopeFilter 结构/白名单校验**（`monitor.ts`：新增 `validateScopeFilter`/`validateScopeFilterValue`，wire 入 `validateRule` 与 `updateRule`）——只允许目标实体 registry 字段名的标量值或限定操作符包 `equals/not/in/notIn/gt/gte/lt/lte/contains/notContains/startsWith/endsWith`；拒绝嵌套 key、关系过滤、任意 JSON。
+2. **conditionExpr 字段白名单执行级校验**（`ruleEngine.ts`：新增 `collectConditionFields` 扫描 AST `@path`；`monitor.ts` 新增 `assertRuleConditionFields`）——`@字段` 顶层名必须 ∈ 目标实体 registry 字段；多段路径（`@a.b`）一律拒绝（fetcher 只产出扁平行）。同时接入 `POST /api/monitor/validate`（可选 `target` 参数做字段级预检）。
+3. **事件收敛**（`packages/events`：删除 3 个死常量 `ProcessInstance*`，全库无引用；`expense.ts` 新增纯函数 `toExpenseDecisionEvent` 冻结 `ExpenseApproved/Rejected` payload 契约，三处 producer（expense PATCH / workflow tasks POST / tools autoApproveExpense）统一调用）。
+
+#### 32.4 围栏表（终稿）
+| 能力/字段 | 当前用途 | 容易演变成 | 明确允许 | 明确禁止 | 是否需要修改 |
+| --- | --- | --- | --- | --- | --- |
+| Rule Engine | 纯条件求值（Pratt，无副作用） | 万能业务引擎 | 解析/校验/求值布尔 DSL，纯函数 | 查询、业务计算、修改、告警、通知、流程编排进入求值器 | 否（保持） |
+| conditionExpr | 行内布尔条件 | 万能脚本 | `@`字段+14 固定函数白名单；新函数须纯函数+测试 | 语句/赋值/任意 JS 函数/IO | **本轮已改**：registry 执行级白名单 |
+| scopeFilter | Prisma where 直通（未沙箱） | 第二查询语言 | 注册标量字段+限定操作符的窗口裁剪 | 关系过滤、任意 JSON、未注册字段、嵌套 key | **本轮已改**：结构校验 |
+| Registry | 规则字段白名单 | 万能数据入口/字典 | 声明字段+派生标记、驱动 UI 与 objectId | 携带表/repo/连接信息 | 本轮已改为执行级 |
+| Derived Field | monitor 内联（days 走领域） | 业务计算中心 | 实体/跨字段/日期纯计算；1 级扁平关联 | 副作用、外部服务、深层链、scopeFilter 自造派生 | 否（第二消费者即升领域） |
+| monitor.ts | 规则系统总管（7~8 类职责） | 上帝模块 | 规则 CRUD、runRule 编排、幂等、日志 | 新规则硬编码、非规则域通知、告警处理动作 | 拆出项已登记（fetch/seed，本轮不动） |
+| Alert | 只读问题记录（幂等） | 第二 Workflow | pending→resolved、关联对象、统计 | 驱动业务审批/修改业务记录 | 否（保持） |
+| availableActions | 字符串数组，零消费者 | 万能动作系统 | monitor 恒写 `[]`；未来=已注册 Tool 名 | 自定义字符串动作、if(action===...) | 否（冻结语义） |
+| NotificationLog | 发送日志+收件箱混用 | 万能消息表 | inapp 行=inbox、非 inapp 仅审计 | 非 inapp 进 inbox、塞无关提醒 | 否（文档定案） |
+| Message | = NotificationLog 的 inapp 行 | — | 收件箱读/已读 | 与发送日志身份合并污染生命周期 | 否 |
+| formData | 表单数据+WF 上下文+任意 JSON | 万能 JSON | 引用键恰一 + approverId + 业务 blob | 承载审批指令、依赖未知 key | 否（语义定案） |
+| businessType | 不存在（0 处） | 万能分发器 | 保持不存在；definition.code 枚举承担 | 新增字符串 businessType 做 switch | 否；红线：第 3 业务类型转 handler |
+| Workflow Task API | 完成 Task+审批副作用同 POST | 万能审批 API | 完成 Task+触发领域 handler | 三处重复实现扩散（已登记收敛） | 否（行为不变） |
+| Repository | 数据访问+部分守卫 | 第二 Service | 事务/守卫/状态转换原语 | import 事件总线、跨实体编排、结算逻辑流入 | 否（保持不 import events） |
+| Event | 只写不读；多 producer+payload 漂移 | 万能事件总线 | 已发生事实；唯一 producer；冻结 payload | 命令语义、无消费者新事件、死常量 | **本轮已改**：删死常量+payload 契约冻结 |
+
+#### 32.5 验证实录
+- 门禁：pnpm test **50/50**（新增 collectConditionFields 单测）、typecheck 6/6、lint 0、data-service tsc 0。
+- curl E2E（POST /api/monitor/validate）：合法表达式 OK；`@bogus` REJ、`@name.size`（多段）REJ；跨实体字段（laborContract 规则用 `@applicantName`）REJ。
+- create-rule 冒烟：合法规则 201（RULE-FENCE-GOOD，已清理删除）；`scopeFilter:{nopeField:1}` 400、`scopeFilter:{status:{weirdOp:"x"}}` 400、`conditionExpr:"@doesNotExist==1"` 400；删除后规则库恢复 3 条种子规则。
+- 事件收敛为编译+单测层面确认（三处 producer 统一 builder，死常量删除且无引用）。
+
+```
+提交文件清单（本地提交，未 push）：
+packages/data-service/src/repositories/ruleEngine.ts         (collectConditionFields + 导出)
+packages/data-service/src/repositories/monitor.ts            (validateScopeFilter + assertRuleConditionFields，wire 入 create/update)
+packages/data-service/src/repositories/expense.ts            (toExpenseDecisionEvent payload 契约)
+packages/data-service/src/repositories/ruleEngine.test.ts    (collectConditionFields 单测)
+packages/events/src/index.ts                                 (删除 3 个死常量)
+packages/tools/src/index.ts                                  (autoApproveExpense 用统一 payload)
+apps/portal/src/app/api/workflow/tasks/route.ts              (approve/reject 用统一 payload)
+apps/portal/src/app/api/hr/expenses/[id]/route.ts            (approve/reject 用统一 payload)
+apps/portal/src/app/api/monitor/validate/route.ts            (可选 target 字段级预检)
+docs/batch1-hr-closure-acceptance.md                         (本节)
+```
+
+#### 32.6 遗留红线（下一轮候选，本轮不动）
+- 派生计算归属领域（daysRemaining/probationEnd 出现页面消费者时）。
+- `fetchTargetRows` 拆出于 monitor；`seedDefaultRules` 移出引擎。
+- `alert.ts` legacy 双引擎退役判定。
+- Workflow Task API 第 3 业务类型必须转 DomainHandler；三处审批重复实现收敛。

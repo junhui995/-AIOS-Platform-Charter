@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { WorkflowEngine } from '@/lib/workflow/engine';
-import { workflowRepository, leaveRepository, expenseRepository } from '@aios/data-service';
+import { workflowRepository, leaveRepository, expenseRepository, toExpenseDecisionEvent } from '@aios/data-service';
 import { eventBus, EventTypes } from '@aios/events';
 
 /**
@@ -61,15 +61,12 @@ export async function POST(req: Request) {
           eventType: EventTypes.EXPENSE_APPROVED,
           aggregate: 'Expense',
           aggregateId: formData.expenseId,
-          payload: {
-            expenseId: formData.expenseId,
-            code: expense.code,
-            amount: expense.amount,
+          payload: toExpenseDecisionEvent(expense, {
             decision: 'APPROVE',
             operatorId: decidedBy,
-            comment: comment ?? null,
+            comment,
             processInstanceId: task.instanceId,
-          },
+          }),
         });
       } else {
         const expense = await expenseRepository.reject(formData.expenseId, decidedBy);
@@ -77,15 +74,12 @@ export async function POST(req: Request) {
           eventType: EventTypes.EXPENSE_REJECTED,
           aggregate: 'Expense',
           aggregateId: formData.expenseId,
-          payload: {
-            expenseId: formData.expenseId,
-            code: expense.code,
-            amount: expense.amount,
+          payload: toExpenseDecisionEvent(expense, {
             decision: 'REJECT',
             operatorId: decidedBy,
-            comment: comment ?? null,
+            comment,
             processInstanceId: task.instanceId,
-          },
+          }),
         });
       }
     }

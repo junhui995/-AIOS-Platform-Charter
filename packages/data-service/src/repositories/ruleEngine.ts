@@ -350,6 +350,35 @@ export function parseCondition(expr: string): ParseResult {
   }
 }
 
+export interface FieldScanResult {
+  ok: boolean;
+  error?: string;
+  fields: string[];
+}
+
+/**
+ * Parses a condition and returns every `@field` / `@object.field` reference
+ * it reads. Used to enforce the Registry whitelist at rule authoring time,
+ * so a rule can never silently reference an undeclared field.
+ */
+export function collectConditionFields(expr: string): FieldScanResult {
+  try {
+    const parser = new Parser(tokenize(expr));
+    const ast = parser.parse();
+    const fields = new Set<string>();
+    const walk = (node: Ast): void => {
+      if (node.kind === 'field') fields.add(node.path);
+      else if (node.kind === 'fn') node.args.forEach(walk);
+      else if (node.kind === 'un') walk(node.operand);
+      else if (node.kind === 'bin') { walk(node.left); walk(node.right); }
+    };
+    walk(ast);
+    return { ok: true, fields: [...fields] };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err), fields: [] };
+  }
+}
+
 export function compileCondition(expr: string): (env: Record<string, unknown>) => boolean {
   const parser = new Parser(tokenize(expr));
   const ast = parser.parse();
