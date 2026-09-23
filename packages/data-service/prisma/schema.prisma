@@ -725,7 +725,14 @@ model NotificationLog {
   channel    String // inapp, email, dingtalk, wecom, webhook
   alertId    String?
   target     String? // relatedObjectId or subject
+  employeeId String? // in-app inbox owner (null = broadcast)
+  title      String?
+  body       String?
+  readAt     DateTime?
   ok         Boolean
   error      String?
   sentAt     DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([channel])
 }

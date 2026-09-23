@@ -438,3 +438,48 @@ apps/portal/src/components/layout/Sidebar.tsx              (业务管理 + 任�
 docs/batch1-hr-closure-acceptance.md                       (本文件)
 ```
 提交：本地提交（未 push，遵守用户指示）。
+### 31. 消息中心（Message Center，Phase 1）：预警→站内通知→收件箱闭环
+
+**目标**：把规则引擎已产出的站内通知（NotificationLog channel=inapp）升级为可操作收件箱，闭环"规则预警 → 消息 → 用户处理/已读"。
+
+**Schema 变更（db push 已应用，新增列均可空，无数据丢失）**
+- NotificationLog +employeeId String?（收件人，NULL=全体广播）/ +title String? / +body String? / +readAt DateTime?，新增 @@index([employeeId])、@@index([channel])。
+
+**规则引擎侧（packages/data-service/src/repositories/monitor.ts）**
+- fetchTargetRows 全部 5 类 target（laborContract/employee/leaveRequest/expense/dailyAttendance）行对象增加 employeeId，用于定向投递。
+- 通知写入补齐 employeeId（=hit row.employeeId ?? null）、title（=Alert.title）、body（=Alert.description）；外部渠道仍 ok:false 标注"外部渠道适配器待接入（Phase C）"。
+
+**收件箱仓库（packages/data-service/src/repositories/messages.ts，新增，index.ts 导出）**
+- listMessages(employeeId, view)：channel=inapp，employeeId===本人 OR employeeId IS NULL（广播）可见；view=unread 过滤 readAt IS NULL；按 sentAt 倒序。
+- unreadCount / markRead(id, employeeId)（updateMany，非本人不可改）/ markAllRead(employeeId)。
+
+**API（apps/portal/src/app/api/messages/**）
+- GET /api/messages?employeeId=X&view=all|unread → { items, unread, total }（并发取未读数与总数）。
+- PATCH /api/messages/[id]：{employeeId} 单条已读（非本人 404）。
+- POST /api/messages：{employeeId} 全部已读 → { marked }。
+
+**页面（apps/portal/src/app/my/messages/，Sidebar"员工自助"新增「消息中心」入口）**
+- "以员工身份查看"切换；未读/全部汇总卡；全部/未读 Tab；消息行：未读红点+标题（缺省"规则通知"）+正文+关联预警徽标+时间；点击单条标记已读；顶部"全部已读"按钮。
+
+**验证实录（dev 3000 + 隧道 DB）**
+- 造临时规则 RULE-MSG-TEST（target=employee，条件 @code == 'EMP-002'，inapp 模板）→ run 返回 summary { scanned:3, hit:1, raised:1 }。
+- Alice(EMP-002) 收件箱：total=3（1 条定向新消息含 title/body/employeeId + 2 条历史广播行 employeeId=NULL），unread=3。
+- PATCH 单条 → {read:true}；POST read-all → marked=2；再次 unread=0。
+- Admin(EMP-000) 可见广播（total=2）；临时规则已 DELETE（200），演示消息/Alert 保留。
+- SSR /aios/my/messages=200、GET /api/messages=200。
+- 门禁：pnpm test 49/49、typecheck 6/6、next lint 0（全量绿，工作区该次提交后干净）。
+
+**已读语义说明**：广播行（employeeId=NULL）的 readAt 写在行上，任一员工标记已读即全局已读；定向消息按收件人隔离。如需每人独立广播已读需引入收件-状态关联表，留待后续迭代。
+
+```
+提交文件清单（本地提交，未 push，等待用户指示）：
+packages/data-service/prisma/schema.prisma        (NotificationLog inbox 字段 + 索引)
+packages/data-service/src/repositories/monitor.ts  (fetchTargetRows +employeeId；通知写 title/body/收件人)
+packages/data-service/src/repositories/messages.ts (新增：收件箱仓库)
+packages/data-service/src/index.ts                 (导出 messages)
+apps/portal/src/app/api/messages/route.ts          (GET 列表+未读数；POST 全部已读)
+apps/portal/src/app/api/messages/[id]/route.ts     (PATCH 单条已读)
+apps/portal/src/app/my/messages/page.tsx           (收件箱页)
+apps/portal/src/components/layout/Sidebar.tsx      (员工自助 + 消息中心)
+docs/batch1-hr-closure-acceptance.md               (本文档)
+```

@@ -63,6 +63,7 @@ async function fetchTargetRows(rule: {
       });
       return rows.map((r) => ({
         id: r.id,
+        employeeId: r.employeeId,
         code: r.code,
         employeeName: r.employee.name,
         employeeCode: r.employee.code,
@@ -79,6 +80,7 @@ async function fetchTargetRows(rule: {
         probationEnd.setMonth(probationEnd.getMonth() + 6);
         return {
           id: r.id,
+          employeeId: r.id,
           name: r.name,
           code: r.code,
           status: r.status,
@@ -95,6 +97,7 @@ async function fetchTargetRows(rule: {
       });
       return rows.map((r) => ({
         id: r.id,
+        employeeId: r.employeeId,
         employeeName: r.employee.name,
         employeeCode: r.employee.code,
         leaveType: r.leaveType,
@@ -112,6 +115,7 @@ async function fetchTargetRows(rule: {
       });
       return rows.map((r) => ({
         id: r.id,
+        employeeId: r.employeeId,
         applicantName: r.employee.name,
         applicantCode: r.employee.code,
         amount: Number(r.amount),
@@ -127,6 +131,7 @@ async function fetchTargetRows(rule: {
       });
       return rows.map((r) => ({
         id: r.id,
+        employeeId: r.employeeId,
         employeeName: r.employee.name,
         employeeCode: r.employee.code,
         date: r.date,
@@ -369,6 +374,9 @@ export const monitorRepository = {
               channel: action.channel,
               alertId: createdAlert.id,
               target: objectId,
+              employeeId: (row.employeeId as string | null | undefined) ?? null,
+              title: createdAlert.title,
+              body: createdAlert.description,
               ok: action.channel === 'inapp',
               error: action.channel === 'inapp' ? null : '外部渠道适配器待接入（Phase C）',
             },
