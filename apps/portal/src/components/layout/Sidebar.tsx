@@ -7,7 +7,7 @@ import {
   Home, Users, FileText, Settings,
   PieChart, Sparkles,
   Network, Workflow, BarChart3, Calculator, Smartphone,
-  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge, Receipt, ListTodo, Bell
+  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge, Receipt, ListTodo, Bell, BookOpen
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -27,6 +27,7 @@ export default function Sidebar() {
       <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-4 px-3 uppercase tracking-wider">工作台</div>
         <NavItem href="/" icon={<Home size={18} />} label="个人首页" active={isAct('/')} />
+        <NavItem href="/knowledge" icon={<BookOpen size={18} />} label="知识库" active={isAct('/knowledge')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">员工自助 (Self-Service)</div>
         <NavItem href="/my/leave" icon={<UserRound size={18} />} label="我的假期" active={isAct('/my/leave')} />

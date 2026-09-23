@@ -3,7 +3,7 @@
  * Runs once per Node.js server process (standalone/production) at startup.
  * In dev (`next dev`) use `instrumentationHook`; see next.config.mjs.
  */
-import { monitorRepository } from '@aios/data-service';
+import { monitorRepository, knowledgeRepository } from '@aios/data-service';
 
 const REGISTER = Symbol.for('@aios/monitor-scheduler');
 
@@ -40,6 +40,13 @@ export async function register() {
     console.log('[monitor] seed:', seeded.join(', '));
   } catch (err) {
     console.error('[monitor] seed failed:', err instanceof Error ? err.message : err);
+  }
+
+  try {
+    const seeded = await knowledgeRepository.seedDemoArticles();
+    if (seeded.length > 0) console.log('[knowledge] seeded demo articles:', seeded.join(', '));
+  } catch (err) {
+    console.error('[knowledge] seed failed:', err instanceof Error ? err.message : err);
   }
 
   const timer = setInterval(tick, TICK_MS);

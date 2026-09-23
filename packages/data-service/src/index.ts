@@ -24,3 +24,4 @@ export * from './repositories/ruleEngine';
 export * from './repositories/registry';
 export * from './repositories/monitor';
 export * from './repositories/messages';
+export * from './repositories/knowledge';

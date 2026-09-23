@@ -557,3 +557,57 @@ docs/batch1-hr-closure-acceptance.md                         (本节)
 - `fetchTargetRows` 拆出于 monitor；`seedDefaultRules` 移出引擎。
 - `alert.ts` legacy 双引擎退役判定。
 - Workflow Task API 第 3 业务类型必须转 DomainHandler；三处审批重复实现收敛。
+### 33. 知识库（Knowledge Base）—— Phase 1 最后一块版图
+
+#### 33.1 定位与边界
+知识库是 Phase 1 工作台版图收尾版块：制度、流程、操作指南的统一沉淀入口。按围栏定案（§32）刻意收敛边界——**零事件、零规则、零工作流、零权限**：
+- 不发布任何事件（§32.2：事件必须唯一 producer + 明确消费者；暂无消费者故不多造）。
+- 不进规则引擎 Registry（不产生派生字段，无跨实体预警诉求）。
+- 无审批流（文档生命周期仅 DRAFT/PUBLISHED 二态，由作者直接维护）。
+- 权限随 Identity/Permission 支柱后置（当前全量可见，与规则/任务页一致）。
+
+#### 33.2 数据模型
+`KnowledgeArticle`（packages/data-service/prisma）：
+```
+id / title / category(枚举) / summary? / content / tags[] /
+status(DRAFT|PUBLISHED) / authorId? / authorName? /
+viewCount / publishedAt? / createdAt / updatedAt；@@index([category],[status])
+```
+分类枚举 `KNOWLEDGE_CATEGORIES = POLICY | HR | FINANCE | PROCESS | HOWTO`；
+状态 `DRAFT | PUBLISHED`。authorId 暂为普通字段（不建 FK，避免 Employee 模型反向耦合）。
+
+#### 33.3 仓库与 API
+- `knowledgeRepository`：`list(q|category|status)`（标题/正文/标签模糊搜索 + 分类/状态过滤）、`get`、`create`（分类白名单 + 状态校验）、`update`（状态转换守卫：DRAFT↔PUBLISHED 不允许再写同态；首次发布写 publishedAt）、`delete`、`bumpView`（阅读计数）、`seedDemoArticles`（幂等：仅空表时灌 3 篇演示文章）。
+- API：
+  - `GET/POST /api/knowledge`：搜索列表 `{items,total}`；创建校验（标题必填、正文≥20 字、分类/状态白名单）。
+  - `GET /api/knowledge/[id]`：单篇读取 + 阅读计数；`PATCH` 更新（含状态转换）；`DELETE` 删除。
+- 页面：`/knowledge`（搜索框、分类 chips、状态下拉、卡片列表、新建/编辑弹层、发布/下架、删除）；`/knowledge/[id]`（详情渲染，纯文本 pre-wrap）。Sidebar「工作台」组新增「知识库」。
+
+#### 33.4 验证实录
+- 门禁：pnpm test 50/50、typecheck 0、lint 0、data-service tsc 0。
+- db push 应用成功（DATABASE_URL 注入自 apps/portal/.env.local）。
+- 种子幂等：首启灌入 3 篇 PUBLISHED 演示文章（考勤办法/报销流程/请假指南）。
+- curl E2E：
+  - LIST total=3；搜索 `q=报销+status=PUBLISHED`→1、`q=审批+category=FINANCE`→1。
+  - CREATE 201 → GET 阅读计数 1→2（逐次 +1）→ PATCH 发布（publishedAt 落库）→ DELETE 200。
+  - 校验：非法分类/空标题/正文过短/非法状态 → 全部 400 且错误信息明确；不存在的 id → 404。
+- SSR：`/knowledge` 200、`/knowledge/[id]` 200、`/aios` 壳 200。
+
+#### 33.5 提交文件清单
+```
+packages/data-service/prisma/schema.prisma            (KnowledgeArticle + 索引)
+packages/data-service/src/repositories/knowledge.ts   (仓库 + 种子)
+packages/data-service/src/index.ts                    (导出)
+apps/portal/src/app/api/knowledge/route.ts            (列表/创建)
+apps/portal/src/app/api/knowledge/[id]/route.ts       (详情/更新/删除)
+apps/portal/src/app/knowledge/page.tsx                (知识库列表)
+apps/portal/src/app/knowledge/[id]/page.tsx           (详情)
+apps/portal/src/components/layout/Sidebar.tsx         (导航入口)
+apps/portal/src/instrumentation.ts                    (幂等种子挂载)
+docs/batch1-hr-closure-acceptance.md                  (本节)
+```
+
+#### 33.6 遗留候选（不阻塞交付）
+- Markdown 渲染（当前纯文本 pre-wrap，按需换 `react-markdown`）。
+- 文档版本历史 / 审批发布流（当前直接二态）。
+- 权限化（跟随 Identity/Permission 支柱）。

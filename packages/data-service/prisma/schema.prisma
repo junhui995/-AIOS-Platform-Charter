@@ -736,3 +736,22 @@ model NotificationLog {
   @@index([employeeId])
   @@index([channel])
 }
+
+model KnowledgeArticle {
+  id          String   @id @default(uuid())
+  title       String
+  category    String // KNOWLEDGE_CATEGORIES: POLICY | HR | FINANCE | PROCESS | HOWTO
+  summary     String?
+  content     String
+  tags        String[] @default([])
+  status      String   @default("DRAFT") // DRAFT | PUBLISHED
+  authorId    String?
+  authorName  String?
+  viewCount   Int      @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
