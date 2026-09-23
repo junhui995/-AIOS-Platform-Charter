@@ -217,6 +217,27 @@ export const workflowRepository = {
     });
   },
 
+  /** Tasks a given operator already handled (assigned back on completion). */
+  async listDoneTasks(assigneeId?: string | null) {
+    return prisma.processTask.findMany({
+      where: {
+        assigneeId: assigneeId ?? undefined,
+        status: { in: ['COMPLETED', 'REJECTED'] },
+      },
+      include: {
+        instance: {
+          select: {
+            formData: true,
+            initiatorId: true,
+            status: true,
+            version: { select: { definition: { select: { name: true } } } },
+          },
+        },
+      },
+      orderBy: { completedAt: 'desc' },
+    });
+  },
+
   /**
    * Completes a task and writes its log atomically.
    */

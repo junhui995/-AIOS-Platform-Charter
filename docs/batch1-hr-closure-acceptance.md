@@ -395,3 +395,46 @@ apps/portal/src/components/layout/Sidebar.tsx       (员工自助 + 我的报销
 docs/batch1-hr-closure-acceptance.md                (本文件)
 ```
 提交：本地提交（未 push，遵守用户指示）。
+
+---
+
+# Batch 2（主流程·续）— 流程任务中心（工作流阶段 1）
+
+日期：2026-09-22
+决策：继续主流程下一站 —— 按 012-Workflow-Specification 阶段 1「用户个人工作台 (User Task Center)」落地。
+
+## 27. 交付内容
+- 数据层 `packages/data-service/src/repositories/workflow.ts`：新增 `listDoneTasks(assigneeId)`
+  （COMPLETED/REJECTED 且 assigneeId=我，用于"我已处理"视图；completeTaskAndLog 将处理人回写进 assigneeId）。
+- API：
+  - `GET /api/workflow/tasks/user?employeeId=<id>&view=pending|initiated|done`（新，3 视图）：
+    pending=我（审批人）的待办（含表单域摘要）、initiated=我发起的实例、done=我处理的已办任务。
+  - `POST /api/workflow/tasks`（增强）：完成 BPM 任务后按 formData 同步域单据 ——
+    `leaveRequestId` → `leaveRepository.applyApproval` + `LeaveRequestStatusChanged`；
+    `expenseId` → `expenseRepository.approve/reject` + `ExpenseApproved/Rejected`，
+    使任务中心成为一等审批入口（不再只动 BPM、单据状态脱节）。
+- 页面 `apps/portal/src/app/workflow/tasks/page.tsx`（原 mock 重写为真实数据）：
+  - 三 Tab：我的待办（红点计数，同意/驳回二次确认+可填意见）/ 我发起的（进度节点+状态徽章）/ 我已处理（动作+流程终态）。
+  - 摘要渲染：请假→假别+天数+事由；报销→金额+类别+事由；发起人取自 /api/employee。
+- Sidebar「业务管理 (BPM)」新增「任务中心」（/workflow/tasks，ListTodo 图标）。
+
+## 28. 实测记录（dev:3000）
+- `GET /api/workflow/tasks/user?employeeId=EMP-000&view=pending` → 命中 2 条遗留报销审批待办（审批人=管理员）。
+- 通过任务中心同意其中一条 → `POST` 返回
+  `{success:true, domain:{kind:EXPENSE, recordId:f301a853…}, processInstanceId}`；
+  随后 `GET /api/hr/expenses` 该单 `status=APPROVED`（域回写生效），done 视图含该任务且实例 COMPLETED。
+- `GET /aios/workflow/tasks` → 200，SSR 命中「流程任务中心 / 我的待办」及侧边栏新入口。
+
+## 29. 门禁
+- pnpm test 49/49；pnpm -r typecheck 6/6；next lint（portal）0；data-service tsc 构建通过。
+
+## 30. 本次涉及文件
+```
+packages/data-service/src/repositories/workflow.ts          (listDoneTasks)
+apps/portal/src/app/api/workflow/tasks/route.ts            (POST 域回写同步)
+apps/portal/src/app/api/workflow/tasks/user/route.ts       (新：三视图)
+apps/portal/src/app/workflow/tasks/page.tsx                (mock → 真实任务中心)
+apps/portal/src/components/layout/Sidebar.tsx              (业务管理 + 任务中心)
+docs/batch1-hr-closure-acceptance.md                       (本文件)
+```
+提交：本地提交（未 push，遵守用户指示）。
