@@ -27,3 +27,4 @@ export * from './repositories/messages';
 export * from './repositories/knowledge';
 export * from './repositories/security';
 export * from './repositories/salary';
+export * from './repositories/attendance';

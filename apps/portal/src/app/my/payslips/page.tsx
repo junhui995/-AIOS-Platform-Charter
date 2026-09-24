@@ -12,6 +12,11 @@ interface Slip {
   netPay: string;
   status: string;
   issuedAt: string | null;
+  workDays: number;
+  absentDays: number;
+  lateCount: number;
+  earlyLeaveCount: number;
+  attendanceAdjust: string;
 }
 
 export default function MyPayslipsPage() {
@@ -60,10 +65,16 @@ export default function MyPayslipsPage() {
               </div>
               {s.issuedAt && <span className="text-xs text-gray-400">发布于 {s.issuedAt.slice(0, 10)}</span>}
             </div>
-            <div className="grid grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-5 gap-4 text-sm">
               <div>
                 <div className="text-gray-400 text-xs">基础薪资</div>
                 <div className="font-semibold text-gray-900">¥{s.baseSalary}</div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs">考勤调整（缺勤 {s.absentDays ?? 0} 天 / 迟到 {s.lateCount ?? 0} 次）</div>
+                <div className={`font-semibold ${Number(s.attendanceAdjust) < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                  {Number(s.attendanceAdjust) >= 0 ? '+' : ''}¥{Number(s.attendanceAdjust ?? 0).toFixed(2)}
+                </div>
               </div>
               <div>
                 <div className="text-gray-400 text-xs">奖金</div>

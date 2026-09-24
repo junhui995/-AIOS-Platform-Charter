@@ -740,6 +740,87 @@ docs/batch1-hr-closure-acceptance.md              (本节)
 
 #### 35.6 遗留候选（不阻塞交付）
 - 薪资与考勤/请假数据联动（如缺勤扣款、调休抵扣），把 pay-run 的基准字段扩展为 `baseSalary + 考勤调整`。
+- ~~薪资与考勤/请假数据联动（如缺勤扣款、调休抵扣）~~ → 已实现，见 §36。
 - 个税/五险一金计提与银行代发文件。
 - 福利登记审批流与预算控制（当前 HR 直配 + 自助退出）。
 - 工资条消息通知（复用消息中心，概率触发）。
+
+---
+
+## 36. 薪资×考勤联动（考勤中心真实化 + pay-run 联动）
+
+日期：2026-09-24
+范围：把考勤中心从"统计占位"升级为**真实 PunchRecord/DailyAttendance/SchedulePlan + 异常识别引擎**，
+并把缺勤结果接入算薪（`net = baseSalary + bonus + attendanceAdjust - deductions`）。
+
+### 36.1 定位与边界
+- **定位**：考勤三表（排班计划 / 打卡记录 / 日汇总）+ 状态机分类器 + 月度汇总接入工资单。
+- **联动规则（默认）**：`attendanceAdjust = -absentDays × dailyRate`，`dailyRate = baseSalary / 21.75`（四舍五入 2 位）。
+- **公式覆盖**：pay-run 支持 `formulaExpr`，把考勤调整额当作 **delta**（叠加在基本工资之上的增减额），
+  白名单字段扩至 9 个：`@baseSalary @bonus @deductions @performanceScore @absentDays @workDays @lateCount @earlyLeaveCount @dailyRate`。
+- **幂等**：pay-run 已存在月份同人跳过（`created=0 / skipped>0`）；`refresh:true` 仅对既有 DRAFT 单重算考勤字段与净额。
+- **边界**：不做休息日/节假日法定日历（weekend 默认 [1..5]）、不做跨月调休抵扣、不做加班工时核算（留候选）；
+  考勤分析是"引擎产出"，不做排班/打卡的编辑审批流。
+
+### 36.2 数据模型（db push 已应用）
+- `SalarySlip` 新增：`workDays / absentDays / lateCount / earlyLeaveCount Int @default(0)`、`attendanceAdjust Decimal @default(0) @db.Decimal(10,2)`。
+- `SchedulePlan`：`employeeId + month`（唯一）/ `workDays (String::JSON 数字数组) / startTime / endTime / lateToleranceMin / isActive`。
+- `PunchRecord`：`employeeId + punchTime` / PunchType `CHECK_IN|CHECK_OUT|MANUAL` / source（seed|api）、`@@unique([employeeId, punchTime, type])`。
+- `DailyAttendance`：`employeeId + date`（唯一）/ `scheduleId / shiftActual / status / punchIn / punchOut / lateMinutes / earlyLeaveMinutes`。
+
+### 36.3 考勤状态机（优先级）
+`ABSENT`（无任何打卡）> `MISSED_PUNCH`（只有单卡）> `LATE`（in 超 lateTolerance）> `EARLY_LEAVE`（out 提前）> `NORMAL`。
+`classifyDay` 的 `toMin` 同时支持 `HH:MM` 字符串与 ISO 时间戳（ISO 用 `getUTC*` 解析，规避时区偏移，与 `Date(db.Date)` 统一）。
+
+### 36.4 仓库与 API
+- `packages/data-service/src/repositories/attendance.ts`：`attendanceRepository`
+  - schedules：list/upsert（按 employee+month 幂等，varchar 序列化 workDays JSON）。
+  - daily/punches：按月/区间查询；`analyzeDay(date)` 对选中工作日逐员工重算并幂等 upsert（不存在才落库）。
+  - `aggregateAttendance(month)`：按 `@@unique([employeeId,date])` 聚合出 `absentDays/workDays/lateCount/earlyLeaveCount`（供 pay-run）。
+  - `seedAttendance(month, opts)`：幂等演示播种（`mulberry32` PRNG + 定长种子串，确定性、分布均匀：
+    NORMAL 78% / LATE 8% / EARLY 6% / MISSED 6% / ABSENT 2%；首跑生成 Standard 9-to-6 排班 + 工作日打卡）。
+- `salary.ts` 扩展：
+  - `SALARY_EXPR_FIELDS` 扩 9 字段（置顶常量，表达式引擎/校验/示例共用）。
+  - `computeNetPay = base + bonus + adjust - deductions`；`dailyRateOf(base)`；`attendanceAdjustFor`（纯函数）。
+  - `upsertSlip` 联动分支（`attendanceTarget` 时按聚合写考勤字段）；`updateSlip` 保留既有 adjust。
+  - `payRun(month, { linkAttendance, formulaExpr, refresh })`：先按 `aggregateAttendance` 落考勤字段 → 再按默认/公式算 adjust。
+- API（requireAuth；读 HR READ、写 HR WRITE；自助 owner-or-admin）：
+  - `/api/hr/attendance/schedules`（GET 读 / POST 编排即 upsert）+ `[id]`。
+  - `/api/hr/attendance/daily`（月/区间查询）、`/punches`（月查询）。
+  - `/api/hr/attendance/analyze`（POST 运行状态机引擎；GET 参数化单日查询）。
+  - `/api/hr/attendance/seed`（POST 演示播种）。
+  - `/api/salary/run` 透传 `linkAttendance / formulaExpr / refresh`。
+
+### 36.5 验证实录
+- 门禁：pnpm test **85/85**（新增 attendance.test.ts 12 条：isWorkDay/状态机优先级、HH:MM 与 ISO 混合、聚合去重、
+  种子幂等与分布；salary.test.ts 扩至 15 条：联动默认扣款与公式覆盖）；data-service build 0、portal typecheck 0、lint 0。
+- HTTP 冒烟（20/20 关键断言，全过）：
+  - 匿名访问 daily / analyze → 401；员工（EMP-002）读 daily 200（HR READ），POST analyze / seed → 403（HR WRITE）。
+  - 播种：2026-07 69 天 136 条打卡，状态分布 NORMAL 53 / LATE 8 / EARLY 4 / MISSED 3 / ABSENT 1（确定性、可重复）。
+  - analyzeDay 单日引擎运行幂等（重跑不增行）。
+  - 联动 pay-run：created>0，工资单带 `absentDays>0` 的员工 `attendanceAdjust<0`，且 `netPay = base+bonus+adjust-deductions` 精确成立。
+  - 公式联动：`-@absentDays * @dailyRate + @lateCount * 10` → refresh 后 adjust 逐员工精确等于公式值（`-(absent×daily)+late×10`）。
+  - 员工自助工资条带考勤调整字段；页面 `/hr/attendance`、`/hr/salary`、`/my/payslips` 200。
+- 联动字段落库前先修正演示数据：3 个 Position 的 `baseSalaryRef` 由 0 → 12k/18k/25k 级（此前 §35 工资单 baseSalary=0 即根因）。
+
+### 36.6 提交文件清单
+```
+packages/data-service/prisma/schema.prisma        (SalarySlip 考勤字段 + SchedulePlan/PunchRecord/DailyAttendance)
+packages/data-service/src/repositories/attendance.ts    (状态机/聚合/种子/analyzeDay)
+packages/data-service/src/repositories/attendance.test.ts
+packages/data-service/src/repositories/salary.ts        (9 字段白名单 + computeNetPay/dailyRateOf/payRun 联动)
+packages/data-service/src/repositories/salary.test.ts
+packages/data-service/src/index.ts                      (导出 salary + attendance)
+apps/portal/src/app/api/hr/attendance/{analyze,daily,punches,schedules,schedules/[id],seed}/route.ts
+apps/portal/src/app/api/salary/run/route.ts              (linkAttendance/formulaExpr/refresh 透传)
+apps/portal/src/app/hr/attendance/page.tsx               (真实页：月份/日期选择、运行引擎、状态汇总、明细)
+apps/portal/src/app/hr/salary/page.tsx                   (出勤/缺勤、迟到、考勤调整列 + 联动公式)
+apps/portal/src/app/my/payslips/page.tsx                 (考勤调整卡片)
+apps/portal/src/instrumentation.ts                       (挂 seedAttendance('2026-07'))
+docs/batch1-hr-closure-acceptance.md                     (本节)
+```
+
+### 36.7 遗留候选
+- 休息日/法定节假日日历（weekend 枚举白名单化）、加班工时 → 加班费、调休抵扣缺勤。
+- 排班/打卡的场景化完整 UI（当前为日分析 + 播种演示，签到页留白）。
+- 考勤调整与薪资审批流联动（当前 HR 直算，无二次审批）。

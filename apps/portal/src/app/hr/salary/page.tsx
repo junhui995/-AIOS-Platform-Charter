@@ -13,6 +13,11 @@ interface Slip {
   netPay: string;
   status: string;
   issuedAt: string | null;
+  workDays: number;
+  absentDays: number;
+  lateCount: number;
+  earlyLeaveCount: number;
+  attendanceAdjust: string;
   employee?: {
     code: string;
     name: string;
@@ -34,6 +39,11 @@ const FIELD_LABELS: Record<string, string> = {
   bonus: '奖金',
   deductions: '扣款',
   performanceScore: '绩效系数',
+  absentDays: '缺勤天数',
+  workDays: '出勤天数',
+  lateCount: '迟到次数',
+  earlyLeaveCount: '早退次数',
+  dailyRate: '日薪(21.75)',
 };
 
 export default function SalaryPage() {
@@ -87,11 +97,14 @@ export default function SalaryPage() {
       const res = await fetch('/api/salary/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month }),
+        body: JSON.stringify({ month, linkAttendance: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '批量计算失败');
-      setMsg({ kind: 'ok', text: `已生成 ${data.created} 条、跳过 ${data.skipped} 条（在职 ${data.employees} 人）` });
+      setMsg({
+        kind: 'ok',
+        text: `已生成 ${data.created} 条、跳过 ${data.skipped} 条${data.linked ? `、联动更新 ${data.linked} 条` : ''}（在职 ${data.employees} 人，${data.linkAttendance ? '考勤联动已启用' : '未启用考勤联动'}）`,
+      });
       loadSlips();
     } catch (e) {
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : '批量计算失败' });
@@ -298,7 +311,7 @@ export default function SalaryPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
-                  {['工号', '姓名', '部门', '基础薪资', '奖金', '扣款', '实发', '状态', '操作'].map((h) => (
+                  {['工号', '姓名', '部门', '基础薪资', '出勤/缺勤', '迟到', '考勤调整', '奖金', '扣款', '实发', '状态', '操作'].map((h) => (
                     <th key={h} className="px-4 py-3 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -310,6 +323,11 @@ export default function SalaryPage() {
                     <td className="px-4 py-3">{s.employee?.name ?? '-'}</td>
                     <td className="px-4 py-3">{s.employee?.positions?.[0]?.position?.department?.name ?? '-'}</td>
                     <td className="px-4 py-3">{s.baseSalary}</td>
+                    <td className="px-4 py-3">{s.workDays ?? 0}/{s.absentDays ?? 0}</td>
+                    <td className="px-4 py-3">{s.lateCount ?? 0}</td>
+                    <td className={`px-4 py-3 ${Number(s.attendanceAdjust) < 0 ? 'text-red-500' : Number(s.attendanceAdjust) > 0 ? 'text-green-600' : 'text-gray-300'}`}>
+                      {Number(s.attendanceAdjust) ? Number(s.attendanceAdjust).toFixed(2) : '-'}
+                    </td>
                     <td className="px-4 py-3">{s.bonus ?? '0'}</td>
                     <td className="px-4 py-3">{s.deductions ?? '0'}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{s.netPay}</td>
@@ -377,7 +395,7 @@ export default function SalaryPage() {
                 <div className="text-xs text-gray-400 truncate">{f.description || f.targetId || '适用范围：全公司'}</div>
               </div>
             ))}
-            {formulas.length === 0 && <div className="text-gray-400 text-sm py-6">暂无公式，新建以在线校验算术表达式。</div>}
+            {formulas.length === 0 && <div className="text-gray-400 text-sm py-6">暂无公式。考勤联动示例：`-@absentDays * @dailyRate + @lateCount * 10`（在基本工资之上作调整）</div>}
           </div>
         </div>
       )}
@@ -434,7 +452,7 @@ export default function SalaryPage() {
                 <input
                   value={fForm.expression}
                   onChange={(e) => setFForm({ ...fForm, expression: e.target.value })}
-                  placeholder="baseSalary * performanceScore - deductions"
+                  placeholder="-@absentDays * @dailyRate + @lateCount * 10"
                   className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg font-mono text-sm"
                 />
               </label>

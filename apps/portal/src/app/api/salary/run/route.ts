@@ -10,7 +10,11 @@ export async function POST(req: Request) {
     if (!/^\d{4}-\d{2}$/.test(month)) {
       return NextResponse.json({ error: 'month 格式应为 YYYY-MM' }, { status: 400 });
     }
-    const result = await salaryRepository.payRun(month);
+    const result = await salaryRepository.payRun(month, {
+      linkAttendance: body.linkAttendance !== false,
+      formulaExpr: body.formulaExpr ? String(body.formulaExpr) : null,
+      refresh: body.refresh === true,
+    });
     return NextResponse.json(result);
   } catch (err) {
     return handleRouteError(err);

@@ -5,6 +5,8 @@ import {
   computeNetPay,
   slipEditable,
   slipIssueable,
+  dailyRateOf,
+  attendanceAdjustFor,
 } from './salary';
 
 describe('salary - arithmetic expression evaluator', () => {
@@ -53,9 +55,25 @@ describe('salary - net pay compute & state machine', () => {
     expect(computeNetPay({ baseSalary: '25000', deductions: 2500 })).toBe(22500);
   });
 
+  it('includes attendanceAdjust in net (default 0 for legacy)', () => {
+    expect(computeNetPay({ baseSalary: 12000, attendanceAdjust: -1379.31 })).toBe(12000 - 1379.31);
+    expect(computeNetPay({ baseSalary: 12000 })).toBe(12000);
+  });
+
   it('throws on non-finite inputs', () => {
     expect(() => computeNetPay({ baseSalary: 'abc' })).toThrow();
     expect(() => computeNetPay({ baseSalary: NaN })).toThrow();
+    expect(() => computeNetPay({ baseSalary: 1, attendanceAdjust: Number.NaN })).toThrow();
+  });
+
+  it('daily rate uses statutory 21.75', () => {
+    expect(dailyRateOf(21750)).toBe(1000);
+    expect(dailyRateOf(12000)).toBe(551.72);
+  });
+
+  it('attendance adjust is -(absentDays * dailyRate)', () => {
+    expect(attendanceAdjustFor(2, 551.72)).toBe(-1103.44);
+    expect(attendanceAdjustFor(0, 551.72)).toBe(0);
   });
 
   it('only DRAFT slips are editable/issuable', () => {
@@ -63,5 +81,26 @@ describe('salary - net pay compute & state machine', () => {
     expect(slipEditable('ISSUED')).toBe(false);
     expect(slipIssueable('DRAFT')).toBe(true);
     expect(slipIssueable('ISSUED')).toBe(false);
+  });
+});
+
+describe('salary - attendance linkage in formulas', () => {
+  it('evaluates attendance fields registered in the whitelist', () => {
+    const r = evaluateSalaryExpression('@baseSalary - @absentDays * @dailyRate', {
+      baseSalary: 12000,
+      absentDays: 3,
+      dailyRate: 551.72,
+    });
+    expect(r).toEqual({ ok: true, value: 12000 - 3 * 551.72 });
+  });
+
+  it('rejects attendance fields not registered', () => {
+    const r = evaluateSalaryExpression('@overtimeHours * 20', { baseSalary: 1 });
+    expect(r.ok).toBe(false);
+  });
+
+  it('validates a linkage formula through the sample env', () => {
+    expect(validateSalaryFormula('@baseSalary - @absentDays * @dailyRate + @lateCount * 10').ok).toBe(true);
+    expect(validateSalaryFormula('@absentDays').ok).toBe(true);
   });
 });

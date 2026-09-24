@@ -1,11 +1,20 @@
 import { prisma } from '../index';
+import { aggregateAttendance } from './attendance';
 
-// ---------------------------------------------------------------------------
-// Arithmetic expression evaluator for salary formulas.
-// Grammar (whitelisted on purpose): numbers, @field references, + - * / % ( ),
-// unary minus. No assignment, no function calls, no names other than @field.
-// Evaluation is a pure function: no IO, no prototype access, unknown field => error.
-// ---------------------------------------------------------------------------
+/** Registered fields allowed inside salary expressions. */
+export const SALARY_EXPR_FIELDS = [
+  'baseSalary',
+  'bonus',
+  'deductions',
+  'performanceScore',
+  'absentDays',
+  'workDays',
+  'lateCount',
+  'earlyLeaveCount',
+  'dailyRate',
+] as const;
+
+export type SalaryExprField = (typeof SALARY_EXPR_FIELDS)[number];
 
 export interface SalaryEnv {
   [field: string]: number;
@@ -120,12 +129,18 @@ export function evaluateSalaryExpression(expr: string, env: SalaryEnv): FormulaE
   return result;
 }
 
-/** Registered fields allowed inside salary expressions. */
-export const SALARY_EXPR_FIELDS = ['baseSalary', 'bonus', 'deductions', 'performanceScore'] as const;
-export type SalaryExprField = (typeof SALARY_EXPR_FIELDS)[number];
-
 export function sampleSalaryEnv(overrides: Partial<Record<SalaryExprField, number>> = {}): SalaryEnv {
-  const base: SalaryEnv = { baseSalary: 10000, bonus: 0, deductions: 200, performanceScore: 1 };
+  const base: SalaryEnv = {
+    baseSalary: 10000,
+    bonus: 0,
+    deductions: 200,
+    performanceScore: 1,
+    absentDays: 2,
+    workDays: 20,
+    lateCount: 1,
+    earlyLeaveCount: 0,
+    dailyRate: 459.77,
+  };
   for (const k of Object.keys(overrides)) base[k] = overrides[k as SalaryExprField] as number;
   return base;
 }
@@ -135,17 +150,34 @@ export function validateSalaryFormula(expr: string): FormulaEvalResult {
   return evaluateSalaryExpression(expr, sampleSalaryEnv());
 }
 
-/** Pure net-pay compute used by both single create and mass pay-run. */
+/** Pure net-pay compute used by both single create and mass pay-run.
+ * net = baseSalary + bonus + attendanceAdjust - deductions.
+ */
 export function computeNetPay(input: {
   baseSalary: number | string;
   bonus?: number | string;
   deductions?: number | string;
+  attendanceAdjust?: number | string;
 }): number {
   const base = Number(input.baseSalary);
   const bonus = Number(input.bonus ?? 0);
   const deductions = Number(input.deductions ?? 0);
-  if (!Number.isFinite(base) || !Number.isFinite(bonus) || !Number.isFinite(deductions)) throw new Error('薪资字段必须是有限数值');
-  return Math.round((base + bonus - deductions) * 100) / 100;
+  const adjust = Number(input.attendanceAdjust ?? 0);
+  if (!Number.isFinite(base) || !Number.isFinite(bonus) || !Number.isFinite(deductions) || !Number.isFinite(adjust)) {
+    throw new Error('薪资字段必须是有限数值');
+  }
+  return Math.round((base + bonus + adjust - deductions) * 100) / 100;
+}
+
+/** Daily rate = monthly base / 21.75 (labor law statutory working days). */
+export function dailyRateOf(baseSalary: number): number {
+  return Math.round((baseSalary / 21.75) * 100) / 100;
+}
+
+/** Pure attendance-linked adjustment: default = -(absentDays * dailyRate). */
+export function attendanceAdjustFor(absentDays: number, dailyRate: number): number {
+  if (absentDays === 0) return 0;
+  return Math.round(-absentDays * dailyRate * 100) / 100;
 }
 
 export function slipEditable(status: string): boolean {
@@ -200,18 +232,49 @@ export const salaryRepository = {
     baseSalary: number | string;
     bonus?: number | string;
     deductions?: number | string;
+    attendanceAdjust?: number | string;
+    workDays?: number;
+    absentDays?: number;
+    lateCount?: number;
+    earlyLeaveCount?: number;
     status?: string;
+    attendanceTarget?: boolean; // when true only refresh attendance-linked columns
   }) {
     const baseSalary = Number(data.baseSalary);
     const bonus = Number(data.bonus ?? 0);
     const deductions = Number(data.deductions ?? 0);
-    const netPay = computeNetPay({ baseSalary, bonus, deductions });
+    const adjust = Number(data.attendanceAdjust ?? 0);
+    const existing = await prisma.salarySlip.findUnique({
+      where: { employeeId_month: { employeeId: data.employeeId, month: data.month } },
+    });
+    if (existing && data.attendanceTarget === true) {
+      // Refresh attendance linkage fields on an existing slip (base unchanged).
+      const netPay = computeNetPay({ baseSalary: Number(existing.baseSalary), bonus: Number(existing.bonus), deductions: Number(existing.deductions), attendanceAdjust: adjust });
+      return prisma.salarySlip.update({
+        where: { id: existing.id },
+        data: {
+          attendanceAdjust: adjust,
+          workDays: data.workDays ?? existing.workDays,
+          absentDays: data.absentDays ?? existing.absentDays,
+          lateCount: data.lateCount ?? existing.lateCount,
+          earlyLeaveCount: data.earlyLeaveCount ?? existing.earlyLeaveCount,
+          netPay,
+        },
+        include: { employee: true },
+      });
+    }
+    const netPay = computeNetPay({ baseSalary, bonus, deductions, attendanceAdjust: adjust });
     return prisma.salarySlip.upsert({
       where: { employeeId_month: { employeeId: data.employeeId, month: data.month } },
       update: {
         baseSalary,
         bonus,
         deductions,
+        attendanceAdjust: adjust,
+        workDays: data.workDays ?? 0,
+        absentDays: data.absentDays ?? 0,
+        lateCount: data.lateCount ?? 0,
+        earlyLeaveCount: data.earlyLeaveCount ?? 0,
         netPay,
         status: data.status ?? 'DRAFT',
       },
@@ -221,6 +284,11 @@ export const salaryRepository = {
         baseSalary,
         bonus,
         deductions,
+        attendanceAdjust: adjust,
+        workDays: data.workDays ?? 0,
+        absentDays: data.absentDays ?? 0,
+        lateCount: data.lateCount ?? 0,
+        earlyLeaveCount: data.earlyLeaveCount ?? 0,
         netPay,
         status: data.status ?? 'DRAFT',
       },
@@ -228,7 +296,7 @@ export const salaryRepository = {
     });
   },
 
-  /** Update only DRAFT slips; recompute net. */
+  /** Update only DRAFT slips; recompute net (preserves attendance linkage). */
   async updateSlip(
     id: string,
     data: { baseSalary?: number | string; bonus?: number | string; deductions?: number | string },
@@ -239,7 +307,12 @@ export const salaryRepository = {
     const baseSalary = data.baseSalary !== undefined ? Number(data.baseSalary) : Number(existing.baseSalary);
     const bonus = data.bonus !== undefined ? Number(data.bonus) : Number(existing.bonus);
     const deductions = data.deductions !== undefined ? Number(data.deductions) : Number(existing.deductions);
-    const netPay = computeNetPay({ baseSalary, bonus, deductions });
+    const netPay = computeNetPay({
+      baseSalary,
+      bonus,
+      deductions,
+      attendanceAdjust: Number(existing.attendanceAdjust ?? 0),
+    });
     return prisma.salarySlip.update({
       where: { id },
       data: { baseSalary, bonus, deductions, netPay },
@@ -263,30 +336,95 @@ export const salaryRepository = {
   },
 
   /**
-   * Mass pay-run (idempotent): for every ACTIVE/PROBATION employee with a primary
-   * position, create a DRAFT slip for the month using position.baseSalaryRef as
-   * the base. Slips that already exist for (employeeId, month) are skipped.
+   * Mass pay-run. With linkAttendance=true (default), each slip is produced with
+   * attendance linkage: workDays/absentDays/lateCount/earlyLeaveCount come from
+   * the month's DailyAttendance, and attendanceAdjust is computed as
+   * `-(absentDays * dailyRate)` unless a company-level formula targeting
+   * attendance fields is supplied via formulaExpr.
+   * Idempotent: existing (employeeId, month) slips are skipped since the first
+   * C&B round; `refresh` re-applies attendance fields onto existing DRAFT slips.
    */
-  async payRun(month: string) {
+  async payRun(month: string, opts: { linkAttendance?: boolean; formulaExpr?: string | null; refresh?: boolean } = {}) {
+    const [y, m] = month.split('-').map(Number);
+    if (!y || !m || Number.isNaN(y) || Number.isNaN(m)) throw new Error(`month 格式应为 YYYY-MM: ${month}`);
+    const from = new Date(Date.UTC(y, m - 1, 1));
+    const to = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+
     const employees = await prisma.employee.findMany({
       where: { status: { in: ['ACTIVE', 'PROBATION'] } },
       include: { positions: { where: { isPrimary: true }, include: { position: true } } },
     });
+
     let created = 0;
     let skipped = 0;
+    let linked = 0;
     for (const emp of employees) {
       const baseSalary = Number(emp.positions[0]?.position.baseSalaryRef ?? 0);
       const existing = await prisma.salarySlip.findUnique({
         where: { employeeId_month: { employeeId: emp.id, month } },
       });
+      const link = opts.linkAttendance !== false;
+      let attendance: ReturnType<typeof aggregateAttendance> | null = null;
+      let adjust = 0;
+      if (link) {
+        const records = await prisma.dailyAttendance.findMany({
+          where: { employeeId: emp.id, date: { gte: from, lte: to } },
+          select: { status: true },
+        });
+        attendance = aggregateAttendance(records);
+        const dailyRate = dailyRateOf(baseSalary);
+        if (opts.formulaExpr) {
+          const evalRes = evaluateSalaryExpression(opts.formulaExpr, {
+            baseSalary,
+            bonus: 0,
+            deductions: 0,
+            performanceScore: 1,
+            absentDays: attendance.absentDays,
+            workDays: attendance.workDays,
+            lateCount: attendance.lateCount,
+            earlyLeaveCount: attendance.earlyLeaveCount,
+            dailyRate,
+          });
+          if (!evalRes.ok) throw new Error(`公式对员工 ${emp.code} 求值失败: ${evalRes.error}`);
+          adjust = Math.round(evalRes.value * 100) / 100;
+        } else {
+          adjust = attendanceAdjustFor(attendance.absentDays, dailyRate);
+        }
+      }
+
       if (existing) {
-        skipped += 1;
+        if (link && attendance && opts.refresh === true && slipEditable(existing.status)) {
+          await salaryRepository.upsertSlip({
+            employeeId: emp.id,
+            month,
+            baseSalary,
+            attendanceAdjust: adjust,
+            workDays: attendance.workDays,
+            absentDays: attendance.absentDays,
+            lateCount: attendance.lateCount,
+            earlyLeaveCount: attendance.earlyLeaveCount,
+            attendanceTarget: true,
+          });
+          linked += 1;
+        } else {
+          skipped += 1;
+        }
         continue;
       }
-      await salaryRepository.upsertSlip({ employeeId: emp.id, month, baseSalary });
+
+      await salaryRepository.upsertSlip({
+        employeeId: emp.id,
+        month,
+        baseSalary,
+        attendanceAdjust: adjust,
+        workDays: attendance?.workDays ?? 0,
+        absentDays: attendance?.absentDays ?? 0,
+        lateCount: attendance?.lateCount ?? 0,
+        earlyLeaveCount: attendance?.earlyLeaveCount ?? 0,
+      });
       created += 1;
     }
-    return { month, created, skipped, employees: employees.length };
+    return { month, created, skipped, linked, employees: employees.length, linkAttendance: opts.linkAttendance !== false };
   },
 
   async listFormulas() {
