@@ -105,17 +105,18 @@ model Employee {
   createdBy String?
   updatedBy String?
 
-  role            Role?               @relation(fields: [roleId], references: [id])
-  positions       EmployeePosition[]
-  contracts       LaborContract[]
-  leaveRequests   LeaveRequest[]
-  leaveBalance    LeaveBalance?
-  salarySlips     SalarySlip[]
-  reviews         PerformanceReview[]
-  PunchRecord     PunchRecord[]
-  DailyAttendance DailyAttendance[]
-  expenses         Expense[] @relation("ExpenseOwner")
-  approvedExpenses Expense[] @relation("ExpenseApprover")
+  role             Role?               @relation(fields: [roleId], references: [id])
+  positions        EmployeePosition[]
+  contracts        LaborContract[]
+  leaveRequests    LeaveRequest[]
+  leaveBalance     LeaveBalance?
+  salarySlips      SalarySlip[]
+  benefits         EmployeeBenefit[]
+  reviews          PerformanceReview[]
+  PunchRecord      PunchRecord[]
+  DailyAttendance  DailyAttendance[]
+  expenses         Expense[]           @relation("ExpenseOwner")
+  approvedExpenses Expense[]           @relation("ExpenseApprover")
 }
 
 // Junction table for many-to-many relationship between Employee and Position
@@ -214,19 +215,54 @@ model SalaryFormula {
 }
 
 model SalarySlip {
-  id         String  @id @default(uuid())
+  id         String    @id @default(uuid())
   employeeId String
   month      String // e.g., "2026-07"
-  baseSalary Decimal
-  bonus      Decimal @default(0)
-  deductions Decimal @default(0)
-  netPay     Decimal
-  status     String  @default("DRAFT") // DRAFT, ISSUED
+  baseSalary Decimal   @db.Decimal(10, 2)
+  bonus      Decimal   @default(0) @db.Decimal(10, 2)
+  deductions Decimal   @default(0) @db.Decimal(10, 2)
+  netPay     Decimal   @db.Decimal(10, 2)
+  status     String    @default("DRAFT") // DRAFT, ISSUED
+  issuedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month])
+}
+
+// Benefit catalog + employee enrollment (C&B)
+model BenefitItem {
+  id          String  @id @default(uuid())
+  code        String  @unique // e.g. MEDICAL, HOUSING_FUND, TRANSPORT
+  name        String
+  category    String // INSURANCE, ALLOWANCE, WELFARE
+  periodCost  Decimal @default(0) @db.Decimal(10, 2) // monthly company cost
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enrollments EmployeeBenefit[]
+}
+
+model EmployeeBenefit {
+  id         String  @id @default(uuid())
+  employeeId String
+  itemId     String
+  status     String  @default("ACTIVE") // ACTIVE, OPTED_OUT, TERMINATED
+  startMonth String? // e.g. "2026-07"
+  endMonth   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee    @relation(fields: [employeeId], references: [id])
+  item     BenefitItem @relation(fields: [itemId], references: [id])
+
+  @@unique([employeeId, itemId])
 }
 
 // -----------------------------------------------------------------
@@ -267,15 +303,15 @@ model LeaveBalance {
 // -----------------------------------------------------------------
 
 model Expense {
-  id           String   @id @default(uuid())
-  code         String   @unique
+  id           String    @id @default(uuid())
+  code         String    @unique
   employeeId   String
-  amount       Decimal  @db.Decimal(10, 2)
+  amount       Decimal   @db.Decimal(10, 2)
   reason       String
   category     String? // 报销类别: TRAVEL, TAXI, MEAL, OFFICE, OTHER
   occurredOn   DateTime? // 票据 / 发生日期
   departmentId String?
-  status       String   @default("SUBMITTED") // SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED
+  status       String    @default("SUBMITTED") // SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED
   approvedById String?
 
   createdAt DateTime @default(now())
@@ -358,64 +394,63 @@ model WorkflowDefinition {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  versions    WorkflowVersion[]
+  versions WorkflowVersion[]
 }
 
 model WorkflowVersion {
-  id           String             @id @default(uuid())
+  id           String   @id @default(uuid())
   definitionId String
   version      String
   nodes        Json
   edges        Json
-  isPublished  Boolean            @default(false)
-  createdAt    DateTime           @default(now())
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
-  definition   WorkflowDefinition @relation(fields: [definitionId], references: [id])
-  instances    ProcessInstance[]
+  definition WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  instances  ProcessInstance[]
 }
 
 model ProcessInstance {
-  id           String             @id @default(uuid())
+  id           String    @id @default(uuid())
   versionId    String
   initiatorId  String?
   formData     Json
-  currentNodes Json               @default("[]")
-  status       String             @default("RUNNING") // RUNNING, COMPLETED, TERMINATED, CANCELLED
-  startedAt    DateTime           @default(now())
+  currentNodes Json      @default("[]")
+  status       String    @default("RUNNING") // RUNNING, COMPLETED, TERMINATED, CANCELLED
+  startedAt    DateTime  @default(now())
   endedAt      DateTime?
 
-  version      WorkflowVersion    @relation(fields: [versionId], references: [id])
-  tasks        ProcessTask[]
-  logs         ProcessLog[]
+  version WorkflowVersion @relation(fields: [versionId], references: [id])
+  tasks   ProcessTask[]
+  logs    ProcessLog[]
 }
 
 model ProcessTask {
-  id             String          @id @default(uuid())
+  id             String    @id @default(uuid())
   instanceId     String
   nodeId         String
   nodeName       String
   taskType       String
   assigneeId     String?
   candidateGroup String?
-  status         String          @default("PENDING") // PENDING, COMPLETED, REJECTED, CANCELLED
-  createdAt      DateTime        @default(now())
+  status         String    @default("PENDING") // PENDING, COMPLETED, REJECTED, CANCELLED
+  createdAt      DateTime  @default(now())
   completedAt    DateTime?
 
-  instance       ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 }
 
 model ProcessLog {
-  id          String          @id @default(uuid())
-  instanceId  String
-  taskId      String?
-  actionType  String
-  operatorId  String?
-  details     String?         // Using String to hold comment, JSON could be used later
-  createdAt   DateTime        @default(now())
+  id         String   @id @default(uuid())
+  instanceId String
+  taskId     String?
+  actionType String
+  operatorId String?
+  details    String? // Using String to hold comment, JSON could be used later
+  createdAt  DateTime @default(now())
 
-  instance    ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 }
-
 
 // -----------------------------------------------------------------
 // HR Extension Domain: Grade & Training
@@ -628,15 +663,15 @@ model Invoice {
 // -----------------------------------------------------------------
 
 model OutboxEvent {
-  id         String    @id @default(uuid())
-  eventType  String
-  aggregate  String
+  id          String    @id @default(uuid())
+  eventType   String
+  aggregate   String
   aggregateId String
-  payload    Json
-  status     String    @default("PENDING") // PENDING, PUBLISHED, FAILED
-  attempts   Int       @default(0)
-  lastError  String?
-  createdAt  DateTime  @default(now())
+  payload     Json
+  status      String    @default("PENDING") // PENDING, PUBLISHED, FAILED
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
   publishedAt DateTime?
 
   @@index([status])
@@ -664,50 +699,49 @@ model Alert {
   updatedAt DateTime @updatedAt
 }
 
-
 // -----------------------------------------------------------------
 // Monitoring Rule Engine (phase A: backend-first)
 // -----------------------------------------------------------------
 
 model MonitorRule {
-  id           String   @id @default(uuid())
-  code         String   @unique // e.g. RULE-CONTRACT-EXPIRY
-  name         String
-  module       String // hr, finance, ops ...
-  level        String   @default("medium") // high, medium, low
-  enabled      Boolean  @default(true)
+  id      String  @id @default(uuid())
+  code    String  @unique // e.g. RULE-CONTRACT-EXPIRY
+  name    String
+  module  String // hr, finance, ops ...
+  level   String  @default("medium") // high, medium, low
+  enabled Boolean @default(true)
 
-  target       String // registry entity key, e.g. laborContract, leaveRequest
-  scopeFilter  Json? // optional static filter applied at query time
-  conditionExpr String  // DSL: field refs + operators + pure functions, evaluated per record
-  schedule     Json // { kind: "interval", minutes: N } | { kind: "dailyAt", at: "HH:mm" } | { kind: "manual" }
-  version      Int      @default(1)
+  target        String // registry entity key, e.g. laborContract, leaveRequest
+  scopeFilter   Json? // optional static filter applied at query time
+  conditionExpr String // DSL: field refs + operators + pure functions, evaluated per record
+  schedule      Json // { kind: "interval", minutes: N } | { kind: "dailyAt", at: "HH:mm" } | { kind: "manual" }
+  version       Int    @default(1)
 
-  createdBy  String?
-  updatedBy  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  lastRunAt  DateTime?
-  actions    MonitorRuleAction[]
-  runs       RuleRunLog[]
+  lastRunAt DateTime?
+  actions   MonitorRuleAction[]
+  runs      RuleRunLog[]
 }
 
 model MonitorRuleAction {
-  id          String   @id @default(uuid())
-  ruleId      String
-  rule        MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  id     String      @id @default(uuid())
+  ruleId String
+  rule   MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   channel     String // inapp, email, dingtalk, wecom, webhook
   template    String // message template, supports {{field}} interpolation
-  throttleSec Int      @default(0) // min gap between sends for the same related object
-  enabled     Boolean  @default(true)
+  throttleSec Int     @default(0) // min gap between sends for the same related object
+  enabled     Boolean @default(true)
 }
 
 model RuleRunLog {
-  id         String   @id @default(uuid())
-  ruleId     String
-  rule       MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  id     String      @id @default(uuid())
+  ruleId String
+  rule   MonitorRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   ranAt      DateTime @default(now())
   scanned    Int      @default(0)
@@ -721,7 +755,7 @@ model RuleRunLog {
 }
 
 model NotificationLog {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   ruleId     String?
   channel    String // inapp, email, dingtalk, wecom, webhook
   alertId    String?
@@ -732,26 +766,26 @@ model NotificationLog {
   readAt     DateTime?
   ok         Boolean
   error      String?
-  sentAt     DateTime @default(now())
+  sentAt     DateTime  @default(now())
 
   @@index([employeeId])
   @@index([channel])
 }
 
 model KnowledgeArticle {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   category    String // KNOWLEDGE_CATEGORIES: POLICY | HR | FINANCE | PROCESS | HOWTO
   summary     String?
   content     String
-  tags        String[] @default([])
-  status      String   @default("DRAFT") // DRAFT | PUBLISHED
+  tags        String[]  @default([])
+  status      String    @default("DRAFT") // DRAFT | PUBLISHED
   authorId    String?
   authorName  String?
-  viewCount   Int      @default(0)
+  viewCount   Int       @default(0)
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([category])
   @@index([status])

@@ -7,7 +7,7 @@ import {
   Home, Users, FileText, Settings,
   PieChart, Sparkles,
   Network, Workflow, BarChart3, Calculator, Smartphone,
-  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge, Receipt, ListTodo, Bell, BookOpen
+  CalendarDays, Wallet, ShieldAlert, UserRound, Gauge, Receipt, ListTodo, Bell, BookOpen, Gift, HeartHandshake
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -32,6 +32,8 @@ export default function Sidebar() {
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">员工自助 (Self-Service)</div>
         <NavItem href="/my/leave" icon={<UserRound size={18} />} label="我的假期" active={isAct('/my/leave')} />
         <NavItem href="/my/expenses" icon={<Receipt size={18} />} label="我的报销" active={isAct('/my/expenses')} />
+        <NavItem href="/my/payslips" icon={<Receipt size={18} />} label="我的工资条" active={isAct('/my/payslips')} />
+        <NavItem href="/my/benefits" icon={<HeartHandshake size={18} />} label="我的福利" active={isAct('/my/benefits')} />
         <NavItem href="/my/messages" icon={<Bell size={18} />} label="消息中心" active={isAct('/my/messages')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">核心人事 (HR)</div>
@@ -49,6 +51,7 @@ export default function Sidebar() {
         <NavItem href="/hr/attendance" icon={<PieChart size={18} />} label="考勤中心" active={isAct('/hr/attendance')} />
         <NavItem href="/hr/performance" icon={<BarChart3 size={18} />} label="绩效管理" active={isAct('/hr/performance')} />
         <NavItem href="/hr/salary" icon={<Calculator size={18} />} label="薪资计算" active={isAct('/hr/salary')} />
+        <NavItem href="/hr/benefits" icon={<Gift size={18} />} label="福利管理" active={isAct('/hr/benefits')} />
 
         <div className="text-xs text-[#8E8E93] font-semibold mb-2 mt-6 px-3 uppercase tracking-wider">业务管理 (BPM)</div>
         <NavItem href="/workflow/tasks" icon={<ListTodo size={18} />} label="任务中心" active={isAct('/workflow/tasks')} />

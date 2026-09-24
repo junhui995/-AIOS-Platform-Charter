@@ -682,3 +682,64 @@ docs/batch1-hr-closure-acceptance.md                 (本节)
 - 登录页被强制跳转 + 中间件级页面守卫（当前页面内容鉴权由 API 完成）。
 - SSO/LDAP 与 MFA 接入。
 - 剩余低风险路由（leave/balances、workflow/instances|retro|simulate、chat、contracts/stats、monitor/validate）鉴权标注后续补齐。
+
+### 35. 薪酬与福利（C&B）—— Phase 1 收口的收官支柱
+
+#### 35.1 定位与边界
+把此前纯前端 Mock 的 `/hr/salary`（expr-eval 客户端算死数据）做成真实持久化的 C&B 板块，与组织/岗位/员工/权限底座打通：
+
+- **薪资**：月度工资单（草稿→发布生命周期）、批量算薪（从主岗位 `Position.baseSalaryRef` 取基准，幂等按 `(员工,月份)` 唯一）、工资单独立编辑（发布后锁定）。
+- **公式**：`SalaryFormula` 启用的**算术表达式引擎**（仅 `@字段` 白名单 + `+ - * / % ( )`，无穷大/未注册字段/除零一律报错，纯函数无 IO），与 `ruleEngine` 布尔 DSL 用例区分开（薪资公式面向数值结算）。
+- **福利**：福利目录（BenefitItem）+ 员工登记（EmployeeBenefit，按 `(员工,福利项)` 唯一，ACTIVE/OPTED_OUT 状态），自助退出/重启用；与薪资同属 HR 板块。
+- **权限**：沿用 §34 守卫——管理端 `HR WRITE`，员工自助 `owner-or-admin`（本人数据隔离，他人 IDOR 一律 403）。
+- **边界（刻意不越界）**：不做批量发薪/银行代发/个税；公式引擎不强求与考勤联动（当前 pay-run 以岗位基准工资为准，联动列为候选）；不动 BPM/事件 outbox（无下游消费者）；福利登记不做审批流（HR 直配 + 员工自助退出）。
+
+#### 35.2 数据模型（db push 已应用）
+- `SalarySlip` 增补：`bonus/deductions/netPay` 明确 Decimal(10,2)、`issuedAt`、**`@@unique([employeeId, month])`**（幂等基础）。
+- 新增 `BenefitItem`（code 唯一 / category 三值 INSURANCE|ALLOWANCE|WELFARE / periodCost 月度成本）、`EmployeeBenefit`（**`@@unique([employeeId, itemId])`** / status / startMonth / endMonth）。
+- `Employee.benefits` 反向关联补全。
+
+#### 35.3 仓库与 API
+- `packages/data-service/src/repositories/salary.ts`：`evaluateSalaryExpression`（递归下降解析：数字/@字段/一元负/优先级/括号；白名单字段 `@baseSalary @bonus @deductions @performanceScore`）、`validateSalaryFormula`、`computeNetPay`（纯函数）、状态守卫 `slipEditable/Issueable`（仅 DRAFT）、`salaryRepository`（list/get/upsert/update/issue/delete/payRun 幂等/listFormulas+CRUD 带表达式校验、formulaRepository 由 salaryRepository 承载）、`benefitRepository`（items CRUD 带登记数约束删除、enrollments upsert/optOut、`seedBenefits` 幂等：3 项目录 + 全员 ACTIVE 登记）。
+- API（全部 requireAuth；管理端 HR READ/WRITE；自助 owner-or-admin）：
+  - `/api/salary/slips`（GET 自助仅本人/HR 可查他人 + month/status 过滤；POST HR 建单，net 自动算）、`/api/salary/slips/[id]`（GET 属主或 HR / PATCH 仅 DRAFT 重算 / DELETE 仅 DRAFT）、`/api/salary/slips/[id]/issue`（DRAFT→ISSUED，防重复发布）。
+  - `/api/salary/run`（HR，pay-run 幂等：已存在月份同人直接跳过）、`/api/salary/formulas`（+[id] CRUD）、`/api/salary/validate`（任意登录可在线校验表达式）。
+  - `/api/benefits/items`（+[id] CRUD，有有效登记禁删）、`/api/benefits/enrollments`（+[id] PATCH 属主自助退/全民）。
+
+#### 35.4 验证实录
+- 门禁：pnpm test **67/67**（新增 salary.test.ts 9 条：表达式优先级/括号/取模、@字段与裸字段白名单、未知字段与畸形/除零拒绝、负号与小数、computeNet、草稿状态机）、data-service tsc（build）0、portal typecheck 0、lint 0。
+- HTTP 冒烟（29/29）：
+  - 匿名访问全部 C&B API → 401/308 拦截。
+  - 种子：启动 `seedBenefits` 3 项（补充医疗/公积金/交通补贴）+ 全员登记；staff 读福利目录 200。
+  - 员工：POST 福利项 / POST pay-run → 403；本人工资单/福利登记可读且仅本人数据；`?employeeId=他人` → 403；代他人退出福利 → 403。
+  - HR：pay-run 首跑 created>0，重跑 created=0、skipped>0（幂等）；PATCH 草稿 net 自动重算（10000+500-100=10400）；发布 → ISSUED；重复发布/改已发布 → 报错。
+  - 公式：未知字段创建被拒、合法公式保存 200、`baseSalary / 0` 被 `/validate` 判定不合法。
+  - 部门主管：POST `/api/salary/run` → 403（无 HR WRITE，符合角色矩阵）。
+  - 页面 `/hr/salary`、`/my/payslips`、`/hr/benefits`、`/my/benefits` 均 200。
+
+#### 35.5 提交文件清单
+```
+packages/data-service/prisma/schema.prisma        (SalarySlip 唯一约束/issuedAt + BenefitItem/EmployeeBenefit)
+packages/data-service/src/repositories/salary.ts  (表达式引擎/薪资/福利/种子)
+packages/data-service/src/repositories/salary.test.ts
+packages/data-service/src/index.ts                (导出 salary)
+apps/portal/src/app/api/salary/slips/route.ts     (+ [id]、[id]/issue)
+apps/portal/src/app/api/salary/run/route.ts       (幂等批量算薪)
+apps/portal/src/app/api/salary/formulas/route.ts  (+ [id])
+apps/portal/src/app/api/salary/validate/route.ts  (在线校验)
+apps/portal/src/app/api/benefits/items/route.ts   (+ [id])
+apps/portal/src/app/api/benefits/enrollments/route.ts (+ [id])
+apps/portal/src/app/hr/salary/page.tsx            (真实化：月历/批量计算/编辑发布/公式管理/CSV)
+apps/portal/src/app/hr/benefits/page.tsx          (福利目录 + 登记表)
+apps/portal/src/app/my/payslips/page.tsx          (我的工资条)
+apps/portal/src/app/my/benefits/page.tsx          (我的福利/自助退出)
+apps/portal/src/components/layout/Sidebar.tsx     (导航补充)
+apps/portal/src/instrumentation.ts                (挂 seedBenefits)
+docs/batch1-hr-closure-acceptance.md              (本节)
+```
+
+#### 35.6 遗留候选（不阻塞交付）
+- 薪资与考勤/请假数据联动（如缺勤扣款、调休抵扣），把 pay-run 的基准字段扩展为 `baseSalary + 考勤调整`。
+- 个税/五险一金计提与银行代发文件。
+- 福利登记审批流与预算控制（当前 HR 直配 + 自助退出）。
+- 工资条消息通知（复用消息中心，概率触发）。
