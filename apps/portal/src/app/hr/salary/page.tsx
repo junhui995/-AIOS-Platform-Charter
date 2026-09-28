@@ -18,6 +18,9 @@ interface Slip {
   lateCount: number;
   earlyLeaveCount: number;
   attendanceAdjust: string;
+  overtimeHours: string;
+  overtimePay: string;
+  holidayDays: number;
   employee?: {
     code: string;
     name: string;
@@ -44,6 +47,8 @@ const FIELD_LABELS: Record<string, string> = {
   lateCount: '迟到次数',
   earlyLeaveCount: '早退次数',
   dailyRate: '日薪(21.75)',
+  overtimeHours: '加班小时',
+  hourlyRate: '时薪(21.75/8)',
 };
 
 export default function SalaryPage() {
@@ -311,7 +316,7 @@ export default function SalaryPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
-                  {['工号', '姓名', '部门', '基础薪资', '出勤/缺勤', '迟到', '考勤调整', '奖金', '扣款', '实发', '状态', '操作'].map((h) => (
+                  {['工号', '姓名', '部门', '基础薪资', '出勤/缺勤', '迟到', '考勤调整', '加班(时/费)', '奖金', '扣款', '实发', '状态', '操作'].map((h) => (
                     <th key={h} className="px-4 py-3 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -327,6 +332,12 @@ export default function SalaryPage() {
                     <td className="px-4 py-3">{s.lateCount ?? 0}</td>
                     <td className={`px-4 py-3 ${Number(s.attendanceAdjust) < 0 ? 'text-red-500' : Number(s.attendanceAdjust) > 0 ? 'text-green-600' : 'text-gray-300'}`}>
                       {Number(s.attendanceAdjust) ? Number(s.attendanceAdjust).toFixed(2) : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-xs text-gray-700">{Number(s.overtimeHours ?? 0).toFixed(2)}</div>
+                      <div className={`font-mono text-xs ${Number(s.overtimePay) > 0 ? 'text-green-600' : 'text-gray-300'}`}>
+                        {Number(s.overtimePay) > 0 ? `¥${Number(s.overtimePay).toFixed(2)}` : '-'}
+                      </div>
                     </td>
                     <td className="px-4 py-3">{s.bonus ?? '0'}</td>
                     <td className="px-4 py-3">{s.deductions ?? '0'}</td>

@@ -228,6 +228,9 @@ model SalarySlip {
   lateCount         Int     @default(0)
   earlyLeaveCount   Int     @default(0)
   attendanceAdjust  Decimal @default(0) @db.Decimal(10, 2) // negative = 扣款, positive = 补贴
+  holidayDays       Int     @default(0) // paid statutory holidays in the month
+  overtimeHours     Decimal @default(0) @db.Decimal(5, 2) // total paid overtime hours
+  overtimePay       Decimal @default(0) @db.Decimal(10, 2) // 1.5x/2x/3x weighted overtime pay
 
   netPay     Decimal   @db.Decimal(10, 2)
   status     String    @default("DRAFT") // DRAFT, ISSUED
@@ -377,6 +380,10 @@ model DailyAttendance {
   status        String  @default("NORMAL") // NORMAL, LATE, EARLY_LEAVE, ABSENT, MISSED_PUNCH
   exceptionMemo String? // AI or system memo for the exception
 
+  // Statutory calendar + overtime (法定节假日日历与加班核算)
+  dayType         String @default("WORKDAY") // WORKDAY, RESTDAY, HOLIDAY, MAKEUP_WORKDAY
+  overtimeMinutes Int    @default(0) // paid overtime minutes derived from punches
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -384,6 +391,20 @@ model DailyAttendance {
   schedule SchedulePlan? @relation(fields: [scheduleId], references: [id])
 
   @@unique([employeeId, date])
+}
+
+/// Statutory holiday / make-up workday calendar (法定节假日与调休上班日历).
+/// Source: 国办发明电〔2025〕7号 for 2026; days without an entry fall back to
+/// the schedule's weekly workDays.
+model HolidayCalendar {
+  date        DateTime @unique @db.Date
+  name        String // 元旦 / 春节 / 国庆节(调休) ...
+  dayType     String // HOLIDAY (放假), MAKEUP_WORKDAY (调休上班)
+  isStatutory Boolean @default(false) // 法定节假日(true) vs 调休凑出的休息日(false)
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------

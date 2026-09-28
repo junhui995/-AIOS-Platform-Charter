@@ -64,8 +64,15 @@ export async function register() {
   }
 
   try {
+    const cal = await attendanceRepository.seedCalendar(2026);
+    console.log('[attendance] statutory calendar 2026: holidays=', cal.holidays, 'makeup workdays=', cal.workdays);
+  } catch (err) {
+    console.error('[attendance] calendar seed failed:', err instanceof Error ? err.message : err);
+  }
+
+  try {
     const att = await attendanceRepository.seedAttendance('2026-07');
-    console.log('[attendance] seed 2026-07: workdays=', att.days, 'punches=', att.punches);
+    console.log('[attendance] seed 2026-07: days=', att.days, 'punches=', att.punches, 'overtime days=', att.restOvertimeDays + att.weekdayOvertimeDays);
   } catch (err) {
     console.error('[attendance] seed failed:', err instanceof Error ? err.message : err);
   }

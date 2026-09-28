@@ -764,9 +764,9 @@ docs/batch1-hr-closure-acceptance.md              (本节)
 
 ### 36.2 数据模型（db push 已应用）
 - `SalarySlip` 新增：`workDays / absentDays / lateCount / earlyLeaveCount Int @default(0)`、`attendanceAdjust Decimal @default(0) @db.Decimal(10,2)`。
-- `SchedulePlan`：`employeeId + month`（唯一）/ `workDays (String::JSON 数字数组) / startTime / endTime / lateToleranceMin / isActive`。
-- `PunchRecord`：`employeeId + punchTime` / PunchType `CHECK_IN|CHECK_OUT|MANUAL` / source（seed|api）、`@@unique([employeeId, punchTime, type])`。
-- `DailyAttendance`：`employeeId + date`（唯一）/ `scheduleId / shiftActual / status / punchIn / punchOut / lateMinutes / earlyLeaveMinutes`。
+- `SchedulePlan`（上一轮已存在）：`name @unique` / `workTimeStart / workTimeEnd / lateToleranceMin / workDays Int[]`（PG 数组，非 JSON 串）。
+- `PunchRecord`（上一轮已存在）：`employeeId / punchTime / punchType(IN|OUT) / source`。
+- `DailyAttendance`（上一轮已存在）：`employeeId + date` 唯一（`date` 为 `@db.Date`）/ `scheduleId / punchInTime / punchOutTime / status / exceptionMemo`。
 
 ### 36.3 考勤状态机（优先级）
 `ABSENT`（无任何打卡）> `MISSED_PUNCH`（只有单卡）> `LATE`（in 超 lateTolerance）> `EARLY_LEAVE`（out 提前）> `NORMAL`。
@@ -821,6 +821,100 @@ docs/batch1-hr-closure-acceptance.md                     (本节)
 ```
 
 ### 36.7 遗留候选
-- 休息日/法定节假日日历（weekend 枚举白名单化）、加班工时 → 加班费、调休抵扣缺勤。
+- 法定节假日/调休日历 → 已实现，见 §37。
+- 加班工时 → 加班费（法定 1.5/2/3 倍 + 36h/月上限）→ 已实现，见 §37。
+- 调休抵扣缺勤（加班折算调休、请假优先抵扣）。
 - 排班/打卡的场景化完整 UI（当前为日分析 + 播种演示，签到页留白）。
 - 考勤调整与薪资审批流联动（当前 HR 直算，无二次审批）。
+
+---
+
+## 37. 法定节假日日历 + 加班核算联动算薪
+
+日期：2026-09-24
+范围：把 §36.7 首条遗留做实——**真实法定节假日/调休日历**、**加班工时核算**，
+以及**加班费按劳动法倍率联动进工资单**。实发口径升级为
+`net = baseSalary + bonus + overtimePay + attendanceAdjust - deductions`。
+
+### 37.1 定位与边界
+- **日历优先于周排班**：`resolveDayType()` 先查法定日历，再回退到排班的 `workDays`。
+  调休周六/周日 = `MAKEUP_WORKDAY`（按工作日算），法定假日 = `HOLIDAY`（带薪、**永不判缺勤**），
+  普通周末 = `RESTDAY`（`isPaidDayType=false`，无人打卡则不生成考勤记录）。
+- **加班倍率（劳动法第四十四条）**：工作日延时 1.5×、休息日 2×、法定节假日 3×。
+  上限：日 3 小时（`MAX_DAILY_OVERTIME_MINUTES=180`）、月 36 小时（`MAX_MONTHLY_OVERTIME_MINUTES=2160`，
+  **仅约束工作日延时部分**，休息日/法定假日加班据实计发）。
+- **加班判定**：工作日只算"下班后"的时间（`out − max(in, 排班结束)`）；休息日/法定假日按**整段打卡跨度**计。
+  休息日/假日打卡上限 8 小时（一个班次）。
+- **边界**：不做调休折算（加班转调休）、不做请假优先抵扣缺勤、跨夜班不在当前
+  `HH:MM` 排班模型内（`toMinutes` 取时分，跨日下班卡不参与加班计算）——三条列为遗留候选。
+
+### 37.2 数据模型（db push 已应用）
+- 新增 `HolidayCalendar`：`date` 唯一（`@db.Date`）/ `name` / `dayType`（HOLIDAY | MAKEUP_WORKDAY）/
+  `isStatutory`（法定节假日 true vs 调休凑出的休息日 false，影响 3× vs 2×）/ `note`。
+- `DailyAttendance` 新增：`dayType String @default("WORKDAY")`、`overtimeMinutes Int @default(0)`。
+- `SalarySlip` 新增：`holidayDays Int`、`overtimeHours Decimal(5,2)`、`overtimePay Decimal(10,2)`。
+
+### 37.3 仓库与规则
+- `attendance.ts`（纯函数优先，便于单测）：
+  - `dayKey()`（任意日期输入归一为 YYYY-MM-DD）、`resolveDayType(date, {workDays, calendar})`、
+    `isPaidDayType()`、`computeOvertimeMinutes()`、`OVERTIME_RATES`、`isWorkDay/aggregateAttendance` 扩展。
+  - `aggregateAttendance` 扩展为 8 项输出：`workDays / absentDays / lateCount / earlyLeaveCount /
+    holidayDays / workOvertimeMinutes / restOvertimeMinutes / holidayOvertimeMinutes`；
+    法定假日不计缺勤、休息日不计入勤。
+  - `attendanceRepository` 新增 `listCalendar` / `calendarBetween`（`[from,to]` 精确区间，避免"只带 lte
+    会命中全年第一天"的坑）/ `upsertCalendarEntry`（按 date 幂等）/ `deleteCalendarEntry` /
+    `seedCalendar(year)`（**2026 真实数据**，见 37.5）。
+  - `analyzeDay` 改为日历感知：返回 `dayType / holiday / overtimeMinutes`；假日带薪不判缺勤、
+    休息日无人打卡不落库。
+  - `seedAttendance` 改为三态播种：工作日（~25% 概率加班至 19:00+）、休息日（~35% 概率加班打卡）、
+    法定假日（全员带薪记录）。
+- `salary.ts`：`SALARY_EXPR_FIELDS` 9 → **11 个**（新增 `overtimeHours`、`hourlyRate`）；
+  `hourlyRateOf(base)=base/21.75/8`（4 位小数）；`overtimePayFor({work,rest,holiday,hourlyRate})`
+  按 1.5/2/3 倍并对工作日部分套 36h 上限；`overtimeHoursOf()` 出小时快照；
+  `computeNetPay` 增 `overtimePay`；`upsertSlip`(含 `attendanceTarget` 刷新分支)/`updateSlip`/`payRun` 均带入加班。
+
+### 37.4 API（requireAuth；读 HR READ、写 HR WRITE）
+- `/api/hr/attendance/calendar`：`GET ?year=&from=&to=` 列表；`POST` 新增/更新（按 date 幂等），
+  或 `POST {seedYear}` 一键同步国务院放假安排（2000-2100 校验）。
+- `/api/hr/attendance/calendar/[date]`：`DELETE` 移除（不存在 404）。
+- 参数非法（`dayType` 非枚举 / `name` 空 / 日期格式错）一律 400，不落 500。
+
+### 37.5 日历数据来源
+2026 年安排取自 **国务院办公厅《关于2026年部分节假日安排的通知》（国办发明电〔2025〕7号）**：
+元旦 1/1-1/3（1/4 上班）、春节 2/15-2/23（2/14、2/28 上班）、清明 4/4-4/6、
+劳动节 5/1-5/5（5/9 上班）、端午 6/19-6/21、中秋 9/25-9/27、国庆 10/1-10/7（9/20、10/10 上班），
+共 **33 天放假 + 6 天调休上班**（`isStatutory` 标注法定与非法定日，影响加班倍率）。
+
+### 37.6 验证实录
+- 门禁：pnpm test **108/108**（attendance 27 条：日历优先于周排班/调休上班/假日带薪/1.5×2×3×倍率/
+  日 3h 上限/休息日 8h 上限/调休上班按工作日/漏卡无加班/seedRandom 分布；salary 23 条：时薪、
+  三倍率、36h 月上限只约束工作日、加班费并入实发）；data-service build 0、portal typecheck 0、lint 0。
+- HTTP 冒烟 21/21：匿名 401；员工读日历 200 / 写 403；日历真实数据核对（2026-10-10 调休上班、
+  2026-10-01 法定假、2026-09-20 补班）；日历 CRUD（建 201 → 删 200 → 再删 404）+ 非法 dayType 400；
+  引擎按日历判定（国庆判 HOLIDAY 且 `absent=0`、调休周六判 MAKEUP_WORKDAY、普通周六判 RESTDAY）；
+  加班落库且工作日加班 ≤180 分钟/天；**逐人精确核对 `overtimePay == (work*1.5+rest*2+holiday*3)/60*时薪`**
+  与 `net == base+bonus+overtimePay+adjust-ded`；pay-run 重跑幂等；三页面 200。
+- 上阶段 §36 回归冒烟 20/20（并同步更新其 net 期望公式，纳入 `overtimePay`）。
+- 2026-07 重播种：75 条日记录（工作日 69 + 休息日加班 6）、145 条打卡、日类型分布
+  `WORKDAY 69 / RESTDAY 6`，加班分钟 WORKDAY 1261 / RESTDAY 1980；重跑幂等（75→75）。
+
+### 37.7 提交文件清单
+```
+packages/data-service/prisma/schema.prisma            (HolidayCalendar + DailyAttendance/SalarySlip 加班列)
+packages/data-service/src/repositories/attendance.ts  (日历解析/加班规则/聚合扩展/日历仓库/seedCalendar)
+packages/data-service/src/repositories/attendance.test.ts
+packages/data-service/src/repositories/salary.ts      (11 字段/时薪/加班费倍率+上限/实发并入加班)
+packages/data-service/src/repositories/salary.test.ts
+apps/portal/src/app/api/hr/attendance/calendar/route.ts        (+ [date]/route.ts DELETE)
+apps/portal/src/app/hr/attendance/page.tsx           (法定日历面板 + 日类型/加班列)
+apps/portal/src/app/hr/salary/page.tsx               (加班时数/加班费列)
+apps/portal/src/app/my/payslips/page.tsx             (加班费卡片)
+apps/portal/src/instrumentation.ts                   (挂 seedCalendar(2026))
+docs/batch1-hr-closure-acceptance.md                 (本节)
+```
+
+### 37.8 遗留候选
+- 调休折算：休息日/法定假日加班优先转调休额度（需 `LeaveBalance` 扩展 comp-leave 字段），请假先抵扣调休再扣薪。
+- 跨夜班/24 小时排班的加班计算（当前 `HH:MM` 模型不跨日）。
+- 加班申请与审批流（当前由打卡数据直接推导，无二次审批）。
+- 加班费个税处理、工资条消息通知。

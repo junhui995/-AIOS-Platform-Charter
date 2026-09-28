@@ -1,5 +1,5 @@
 import { prisma } from '../index';
-import { aggregateAttendance } from './attendance';
+import { aggregateAttendance, MAX_MONTHLY_OVERTIME_MINUTES } from './attendance';
 
 /** Registered fields allowed inside salary expressions. */
 export const SALARY_EXPR_FIELDS = [
@@ -12,6 +12,8 @@ export const SALARY_EXPR_FIELDS = [
   'lateCount',
   'earlyLeaveCount',
   'dailyRate',
+  'overtimeHours',
+  'hourlyRate',
 ] as const;
 
 export type SalaryExprField = (typeof SALARY_EXPR_FIELDS)[number];
@@ -140,6 +142,8 @@ export function sampleSalaryEnv(overrides: Partial<Record<SalaryExprField, numbe
     lateCount: 1,
     earlyLeaveCount: 0,
     dailyRate: 459.77,
+    overtimeHours: 6,
+    hourlyRate: 57.47,
   };
   for (const k of Object.keys(overrides)) base[k] = overrides[k as SalaryExprField] as number;
   return base;
@@ -151,22 +155,24 @@ export function validateSalaryFormula(expr: string): FormulaEvalResult {
 }
 
 /** Pure net-pay compute used by both single create and mass pay-run.
- * net = baseSalary + bonus + attendanceAdjust - deductions.
+ * net = baseSalary + bonus + overtimePay + attendanceAdjust - deductions.
  */
 export function computeNetPay(input: {
   baseSalary: number | string;
   bonus?: number | string;
   deductions?: number | string;
   attendanceAdjust?: number | string;
+  overtimePay?: number | string;
 }): number {
   const base = Number(input.baseSalary);
   const bonus = Number(input.bonus ?? 0);
   const deductions = Number(input.deductions ?? 0);
   const adjust = Number(input.attendanceAdjust ?? 0);
-  if (!Number.isFinite(base) || !Number.isFinite(bonus) || !Number.isFinite(deductions) || !Number.isFinite(adjust)) {
+  const overtimePay = Number(input.overtimePay ?? 0);
+  if (!Number.isFinite(base) || !Number.isFinite(bonus) || !Number.isFinite(deductions) || !Number.isFinite(adjust) || !Number.isFinite(overtimePay)) {
     throw new Error('薪资字段必须是有限数值');
   }
-  return Math.round((base + bonus + adjust - deductions) * 100) / 100;
+  return Math.round((base + bonus + overtimePay + adjust - deductions) * 100) / 100;
 }
 
 /** Daily rate = monthly base / 21.75 (labor law statutory working days). */
@@ -174,10 +180,48 @@ export function dailyRateOf(baseSalary: number): number {
   return Math.round((baseSalary / 21.75) * 100) / 100;
 }
 
+/** Hourly rate = monthly base / 21.75 / 8. */
+export function hourlyRateOf(baseSalary: number): number {
+  return Math.round((baseSalary / 21.75 / 8) * 10000) / 10000;
+}
+
 /** Pure attendance-linked adjustment: default = -(absentDays * dailyRate). */
 export function attendanceAdjustFor(absentDays: number, dailyRate: number): number {
   if (absentDays === 0) return 0;
   return Math.round(-absentDays * dailyRate * 100) / 100;
+}
+
+/**
+ * Statutory overtime pay (中华人民共和国劳动法第四十四条):
+ * workday extension 1.5x, rest day 2x, statutory holiday 3x.
+ * The monthly 36h cap (2160 minutes) applies to workday extension only; rest
+ * day / statutory holiday overtime is paid in full when worked.
+ */
+export function overtimePayFor(input: {
+  workOvertimeMinutes: number;
+  restOvertimeMinutes: number;
+  holidayOvertimeMinutes: number;
+  hourlyRate: number;
+}): number {
+  const work = Math.max(0, input.workOvertimeMinutes) / 60;
+  const rest = Math.max(0, input.restOvertimeMinutes) / 60;
+  const holiday = Math.max(0, input.holidayOvertimeMinutes) / 60;
+  const cappedWork = Math.min(work, MAX_MONTHLY_OVERTIME_MINUTES / 60);
+  const total =
+    cappedWork * 1.5 * input.hourlyRate +
+    rest * 2 * input.hourlyRate +
+    holiday * 3 * input.hourlyRate;
+  return Math.round(total * 100) / 100;
+}
+
+/** Total paid overtime hours, rounded to 2 decimals (for the slip snapshot). */
+export function overtimeHoursOf(agg: {
+  workOvertimeMinutes: number;
+  restOvertimeMinutes: number;
+  holidayOvertimeMinutes: number;
+}): number {
+  const minutes = agg.workOvertimeMinutes + agg.restOvertimeMinutes + agg.holidayOvertimeMinutes;
+  return Math.round((minutes / 60) * 100) / 100;
 }
 
 export function slipEditable(status: string): boolean {
@@ -233,6 +277,9 @@ export const salaryRepository = {
     bonus?: number | string;
     deductions?: number | string;
     attendanceAdjust?: number | string;
+    overtimePay?: number | string;
+    overtimeHours?: number;
+    holidayDays?: number;
     workDays?: number;
     absentDays?: number;
     lateCount?: number;
@@ -244,16 +291,26 @@ export const salaryRepository = {
     const bonus = Number(data.bonus ?? 0);
     const deductions = Number(data.deductions ?? 0);
     const adjust = Number(data.attendanceAdjust ?? 0);
+    const overtimePay = Number(data.overtimePay ?? 0);
     const existing = await prisma.salarySlip.findUnique({
       where: { employeeId_month: { employeeId: data.employeeId, month: data.month } },
     });
     if (existing && data.attendanceTarget === true) {
       // Refresh attendance linkage fields on an existing slip (base unchanged).
-      const netPay = computeNetPay({ baseSalary: Number(existing.baseSalary), bonus: Number(existing.bonus), deductions: Number(existing.deductions), attendanceAdjust: adjust });
+      const netPay = computeNetPay({
+        baseSalary: Number(existing.baseSalary),
+        bonus: Number(existing.bonus),
+        deductions: Number(existing.deductions),
+        attendanceAdjust: adjust,
+        overtimePay,
+      });
       return prisma.salarySlip.update({
         where: { id: existing.id },
         data: {
           attendanceAdjust: adjust,
+          overtimePay,
+          overtimeHours: data.overtimeHours ?? Number(existing.overtimeHours),
+          holidayDays: data.holidayDays ?? existing.holidayDays,
           workDays: data.workDays ?? existing.workDays,
           absentDays: data.absentDays ?? existing.absentDays,
           lateCount: data.lateCount ?? existing.lateCount,
@@ -263,7 +320,7 @@ export const salaryRepository = {
         include: { employee: true },
       });
     }
-    const netPay = computeNetPay({ baseSalary, bonus, deductions, attendanceAdjust: adjust });
+    const netPay = computeNetPay({ baseSalary, bonus, deductions, attendanceAdjust: adjust, overtimePay });
     return prisma.salarySlip.upsert({
       where: { employeeId_month: { employeeId: data.employeeId, month: data.month } },
       update: {
@@ -271,6 +328,9 @@ export const salaryRepository = {
         bonus,
         deductions,
         attendanceAdjust: adjust,
+        overtimePay,
+        overtimeHours: data.overtimeHours ?? 0,
+        holidayDays: data.holidayDays ?? 0,
         workDays: data.workDays ?? 0,
         absentDays: data.absentDays ?? 0,
         lateCount: data.lateCount ?? 0,
@@ -285,6 +345,9 @@ export const salaryRepository = {
         bonus,
         deductions,
         attendanceAdjust: adjust,
+        overtimePay,
+        overtimeHours: data.overtimeHours ?? 0,
+        holidayDays: data.holidayDays ?? 0,
         workDays: data.workDays ?? 0,
         absentDays: data.absentDays ?? 0,
         lateCount: data.lateCount ?? 0,
@@ -312,6 +375,7 @@ export const salaryRepository = {
       bonus,
       deductions,
       attendanceAdjust: Number(existing.attendanceAdjust ?? 0),
+      overtimePay: Number(existing.overtimePay ?? 0),
     });
     return prisma.salarySlip.update({
       where: { id },
@@ -337,10 +401,11 @@ export const salaryRepository = {
 
   /**
    * Mass pay-run. With linkAttendance=true (default), each slip is produced with
-   * attendance linkage: workDays/absentDays/lateCount/earlyLeaveCount come from
-   * the month's DailyAttendance, and attendanceAdjust is computed as
-   * `-(absentDays * dailyRate)` unless a company-level formula targeting
-   * attendance fields is supplied via formulaExpr.
+   * attendance linkage: workDays/absentDays/lateCount/earlyLeaveCount/holidayDays
+   * and overtime minutes come from the month's DailyAttendance (statutory
+   * calendar applied), overtimePay follows 劳动法 multipliers (1.5x/2x/3x) and
+   * attendanceAdjust is `-(absentDays * dailyRate)` unless a company-level
+   * formula is supplied via formulaExpr.
    * Idempotent: existing (employeeId, month) slips are skipped since the first
    * C&B round; `refresh` re-applies attendance fields onto existing DRAFT slips.
    */
@@ -366,13 +431,23 @@ export const salaryRepository = {
       const link = opts.linkAttendance !== false;
       let attendance: ReturnType<typeof aggregateAttendance> | null = null;
       let adjust = 0;
+      let overtimePay = 0;
+      let overtimeHours = 0;
       if (link) {
         const records = await prisma.dailyAttendance.findMany({
           where: { employeeId: emp.id, date: { gte: from, lte: to } },
-          select: { status: true },
+          select: { status: true, dayType: true, overtimeMinutes: true },
         });
         attendance = aggregateAttendance(records);
         const dailyRate = dailyRateOf(baseSalary);
+        const hourlyRate = hourlyRateOf(baseSalary);
+        overtimePay = overtimePayFor({
+          workOvertimeMinutes: attendance.workOvertimeMinutes,
+          restOvertimeMinutes: attendance.restOvertimeMinutes,
+          holidayOvertimeMinutes: attendance.holidayOvertimeMinutes,
+          hourlyRate,
+        });
+        overtimeHours = overtimeHoursOf(attendance);
         if (opts.formulaExpr) {
           const evalRes = evaluateSalaryExpression(opts.formulaExpr, {
             baseSalary,
@@ -384,6 +459,8 @@ export const salaryRepository = {
             lateCount: attendance.lateCount,
             earlyLeaveCount: attendance.earlyLeaveCount,
             dailyRate,
+            overtimeHours,
+            hourlyRate,
           });
           if (!evalRes.ok) throw new Error(`公式对员工 ${emp.code} 求值失败: ${evalRes.error}`);
           adjust = Math.round(evalRes.value * 100) / 100;
@@ -399,6 +476,9 @@ export const salaryRepository = {
             month,
             baseSalary,
             attendanceAdjust: adjust,
+            overtimePay,
+            overtimeHours,
+            holidayDays: attendance.holidayDays,
             workDays: attendance.workDays,
             absentDays: attendance.absentDays,
             lateCount: attendance.lateCount,
@@ -417,6 +497,9 @@ export const salaryRepository = {
         month,
         baseSalary,
         attendanceAdjust: adjust,
+        overtimePay,
+        overtimeHours,
+        holidayDays: attendance?.holidayDays ?? 0,
         workDays: attendance?.workDays ?? 0,
         absentDays: attendance?.absentDays ?? 0,
         lateCount: attendance?.lateCount ?? 0,
